@@ -24,6 +24,9 @@
     .date-column {
         width: 120px;
     }
+    .reason-column {
+        width: 200px;
+    }
 </style>
 {% endblock %}
 
@@ -39,6 +42,7 @@
                     <th class="budget-column">予算</th>
                     <th class="client-column">クライアント</th>
                     <th class="date-column">投稿日</th>
+                    <th class="reason-column">選定理由</th>
                 </tr>
             </thead>
             <tbody>
@@ -58,6 +62,7 @@
                     <td class="budget-column">{{ job.budget }}</td>
                     <td class="client-column">{{ job.client }}</td>
                     <td class="date-column">{{ job.posted_date }}</td>
+                    <td class="reason-column">{{ job.gpt_reason if job.gpt_reason else '' }}</td>
                 </tr>
                 {% endfor %}
             </tbody>

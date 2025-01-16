@@ -19,10 +19,135 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
+from openai import OpenAI
+import re
 
 # ログの設定
 logger.remove()  # デフォルトのハンドラを削除
 logger.add("logs/crawler.log", mode="w")  # 上書きモードでログファイルを作成
+
+# .envファイルを読み込む
+load_dotenv()
+
+# OpenAI クライアントの初期化
+client = OpenAI(
+    api_key=os.getenv('OPENAI_API_KEY')
+)
+
+# プロンプトファイルのパス
+PROMPT_FILE = 'prompt.txt'
+
+# デフォルトの設定
+DEFAULT_CONFIG = {
+    "model": "gpt-4",
+    "prompt": "予算が10,000以上のもののみピックする",
+    "temperature": 0,
+    "max_tokens": 100,
+    "response_format": { "type": "json_object" }
+}
+
+# プロンプトと設定を読み込む関数
+def load_config():
+    try:
+        with open(PROMPT_FILE, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+            # 必要なキーがすべて存在することを確認
+            required_keys = ["model", "prompt", "temperature", "max_tokens"]
+            if all(key in config for key in required_keys):
+                # response_formatを追加
+                config["response_format"] = { "type": "json_object" }
+                return config
+            else:
+                print("Warning: Missing required keys in prompt.txt")
+                return DEFAULT_CONFIG
+    except Exception as e:
+        print(f"Error loading config: {e}")
+        return DEFAULT_CONFIG
+
+# GPTによる案件フィルタリング
+def filter_jobs_by_gpt(jobs, config):
+    filtered_jobs = []
+    total_jobs = len(jobs)
+    
+    print(f"GPTフィルタリングを開始します。対象案件数: {total_jobs}")
+    
+    for i, job in enumerate(jobs, 1):
+        print(f"案件 {i}/{total_jobs} を処理中...")
+        # GPTに送信するメッセージを作成
+        messages = [
+            {"role": "system", "content": """あなたは案件の審査員です。与えられた条件に基づいて、案件を評価してください。
+レスポンスは以下のJSON形式で返してください：
+{
+    "decision": "yes" or "no",
+    "reason": "判断理由を1文で"
+}"""},
+            {"role": "user", "content": f"""
+以下の案件が条件を満たすか判断してください。条件: {config['prompt']}
+
+案件情報:
+タイトル: {job['title']}
+予算: {job['budget']}
+クライアント: {job['client']}
+            """}
+        ]
+
+        try:
+            # GPTに問い合わせ（設定を使用）
+            response = client.chat.completions.create(
+                model=config['model'],
+                messages=messages,
+                temperature=config['temperature'],
+                max_tokens=100,
+                response_format={"type": "json_object"}
+            )
+            
+            # レスポンスを取得してJSONとしてパース
+            result = json.loads(response.choices[0].message.content)
+            
+            # 'yes'の場合のみ案件を追加
+            if result.get('decision', '').lower() == 'yes':
+                # 判断理由を案件情報に追加
+                job['gpt_reason'] = result.get('reason', '')
+                filtered_jobs.append(job)
+                print(f"✓ 案件が条件に適合: {job['title']}")
+            else:
+                print(f"✗ 案件が条件に不適合: {job['title']}")
+                
+        except Exception as e:
+            print(f"Error in GPT filtering for job {job['title']}: {e}")
+            # エラーの場合は安全のため、その案件を含める
+            filtered_jobs.append(job)
+    
+    print(f"GPTフィルタリング完了。{len(filtered_jobs)}/{total_jobs} 件が条件に適合")
+    return filtered_jobs
+
+def save_filtered_jobs(jobs, base_filename):
+    """フィルタリング済みの案件をJSONファイルに保存"""
+    filtered_filename = base_filename.replace('.json', '_filtered.json')
+    with open(filtered_filename, 'w', encoding='utf-8') as f:
+        json.dump(jobs, f, ensure_ascii=False, indent=2)
+    print(f"フィルタリング済み案件を保存: {filtered_filename}")
+    return filtered_filename
+
+# クローリング後の処理を修正
+def process_crawled_data(jobs):
+    # 現在時刻を取得してファイル名を生成
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    base_filename = f'crawled_data/jobs_{timestamp}.json'
+    
+    # 生のデータを保存
+    with open(base_filename, 'w', encoding='utf-8') as f:
+        json.dump(jobs, f, ensure_ascii=False, indent=2)
+    print(f"生データを保存: {base_filename}")
+    
+    # GPTフィルタリングを実行
+    config = load_config()
+    filtered_jobs = filter_jobs_by_gpt(jobs, config)
+    
+    # フィルタリング済みデータを保存
+    filtered_filename = save_filtered_jobs(filtered_jobs, base_filename)
+    
+    return base_filename, filtered_filename
 
 class CrowdWorksCrawler:
     def __init__(self, email: str, password: str):
@@ -338,7 +463,10 @@ class CrowdWorksCrawler:
                     # 重複チェックを実行
                     unique_jobs = self.check_duplicates(jobs)
                     if unique_jobs:
-                        self.save_jobs(unique_jobs)
+                        # GPTフィルタリングを含むデータ処理を実行
+                        base_filename, filtered_filename = process_crawled_data(unique_jobs)
+                        self.logger.info(f"生データを保存: {base_filename}")
+                        self.logger.info(f"フィルタリング済みデータを保存: {filtered_filename}")
                     else:
                         self.logger.info("新規または更新された案件はありません")
             else:

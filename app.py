@@ -8,9 +8,9 @@ from datetime import datetime
 app = Flask(__name__)
 Bootstrap(app)
 
-# 最新のJSONファイルを取得する関数
-def get_latest_json():
-    json_files = glob.glob('crawled_data/jobs_*.json')
+# 最新のフィルタリング済みJSONファイルを取得する関数
+def get_latest_filtered_json():
+    json_files = glob.glob('crawled_data/*_filtered.json')
     if not json_files:
         return []
     latest_file = max(json_files, key=os.path.getctime)
@@ -34,7 +34,7 @@ def save_checks(checks):
 
 @app.route('/')
 def index():
-    jobs = get_latest_json()
+    jobs = get_latest_filtered_json()
     checks = load_checks()
     return render_template('index.html', jobs=jobs, checks=checks)
 

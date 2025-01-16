@@ -1,5 +1,0 @@
-2025-01-16 22:33:29.245 | INFO     | __main__:setup_driver:83 - ChromeDriverの設定が完了しました
-2025-01-16 22:33:29.248 | INFO     | __main__:login:101 - ログイン処理を開始
-2025-01-16 22:33:29.248 | ERROR    | __main__:login:178 - ログイン処理でエラー発生: 'CrowdWorksCrawler' object has no attribute 'login_url'
-2025-01-16 22:33:29.248 | ERROR    | __main__:run:301 - ログインに失敗したため、処理を中止します
-2025-01-16 22:33:29.316 | INFO     | __main__:run:304 - クローラーを終了します

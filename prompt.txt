@@ -1,0 +1,7 @@
+{
+    "model": "gpt-4o-mini",
+    "prompt": "予算が10,000以上のもののみピックする",
+    "temperature": 0,
+    "max_tokens": 100,
+    "response_format": { "type": "json_object" }
+} 
