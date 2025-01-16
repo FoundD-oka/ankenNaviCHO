@@ -1,0 +1,23 @@
+2025-01-16 21:45:26.401 | INFO     | __main__:login:46 - ログイン処理を開始
+2025-01-16 21:45:39.778 | ERROR    | __main__:login:71 - ログイン失敗: Message: 
+Stacktrace:
+0   chromedriver                        0x0000000102c2b7a4 cxxbridge1$str$ptr + 2589716
+1   chromedriver                        0x0000000102c2405c cxxbridge1$str$ptr + 2559180
+2   chromedriver                        0x00000001027c7f5c cxxbridge1$string$len + 88260
+3   chromedriver                        0x000000010280d024 cxxbridge1$string$len + 371084
+4   chromedriver                        0x00000001028471a8 cxxbridge1$string$len + 609040
+5   chromedriver                        0x0000000102800e40 cxxbridge1$string$len + 321448
+6   chromedriver                        0x0000000102801a88 cxxbridge1$string$len + 324592
+7   chromedriver                        0x0000000102bf68a0 cxxbridge1$str$ptr + 2372880
+8   chromedriver                        0x0000000102bf9bc4 cxxbridge1$str$ptr + 2385972
+9   chromedriver                        0x0000000102bdd6e0 cxxbridge1$str$ptr + 2270032
+10  chromedriver                        0x0000000102bfa484 cxxbridge1$str$ptr + 2388212
+11  chromedriver                        0x0000000102bcf324 cxxbridge1$str$ptr + 2211732
+12  chromedriver                        0x0000000102c150a0 cxxbridge1$str$ptr + 2497808
+13  chromedriver                        0x0000000102c1521c cxxbridge1$str$ptr + 2498188
+14  chromedriver                        0x0000000102c23cd0 cxxbridge1$str$ptr + 2558272
+15  libsystem_pthread.dylib             0x0000000191da2f94 _pthread_start + 136
+16  libsystem_pthread.dylib             0x0000000191d9dd34 thread_start + 8
+
+2025-01-16 21:45:39.779 | ERROR    | __main__:run:145 - ログインに失敗したため、処理を中止します
+2025-01-16 21:45:39.910 | INFO     | __main__:run:148 - クローラーを終了します
