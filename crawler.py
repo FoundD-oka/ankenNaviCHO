@@ -283,17 +283,69 @@ class CrowdWorksCrawler:
 
         logger.info(f"データを保存しました: {json_path}, {csv_path}")
 
+    def load_previous_jobs(self) -> Dict[str, Dict]:
+        """前回のクロール結果を読み込む"""
+        save_dir = Path("crawled_data")
+        if not save_dir.exists():
+            return {}
+        
+        # 最新のJSONファイルを探す
+        json_files = list(save_dir.glob("jobs_*.json"))
+        if not json_files:
+            return {}
+        
+        latest_file = max(json_files, key=lambda x: x.stat().st_mtime)
+        
+        try:
+            with open(latest_file, "r", encoding="utf-8") as f:
+                jobs = json.load(f)
+                # URL をキーとした辞書に変換
+                return {job["url"]: job for job in jobs}
+        except Exception as e:
+            self.logger.error(f"前回のデータ読み込みに失敗: {str(e)}")
+            return {}
+
+    def check_duplicates(self, new_jobs: List[Dict]) -> List[Dict]:
+        """重複チェックを行い、新規または更新が必要な案件のみを返す"""
+        previous_jobs = self.load_previous_jobs()
+        updated_jobs = []
+        
+        for new_job in new_jobs:
+            url = new_job["url"]
+            if url not in previous_jobs:
+                # 新規案件
+                self.logger.info(f"新規案件を追加: {new_job['title']}")
+                updated_jobs.append(new_job)
+            else:
+                # 既存案件の場合、投稿日時を比較
+                prev_date = datetime.fromisoformat(previous_jobs[url]["posted_date"])
+                new_date = datetime.fromisoformat(new_job["posted_date"])
+                
+                if new_date > prev_date:
+                    # 更新があった場合
+                    self.logger.info(f"案件を更新: {new_job['title']}")
+                    updated_jobs.append(new_job)
+        
+        self.logger.info(f"新規/更新案件: {len(updated_jobs)}件")
+        return updated_jobs
+
     def run(self):
         """クローラーのメイン処理"""
         try:
             if self.login():
                 jobs = self.scrape_jobs()
-                self.save_jobs(jobs)
+                if jobs:
+                    # 重複チェックを実行
+                    unique_jobs = self.check_duplicates(jobs)
+                    if unique_jobs:
+                        self.save_jobs(unique_jobs)
+                    else:
+                        self.logger.info("新規または更新された案件はありません")
             else:
-                logger.error("ログインに失敗したため、処理を中止します")
+                self.logger.error("ログインに失敗したため、処理を中止します")
         finally:
             self.driver.quit()
-            logger.info("クローラーを終了します")
+            self.logger.info("クローラーを終了します")
 
 if __name__ == "__main__":
     # 環境変数を読み込み
