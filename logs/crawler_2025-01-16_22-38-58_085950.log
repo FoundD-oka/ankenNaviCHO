@@ -1,0 +1,14 @@
+2025-01-16 22:38:59.608 | INFO     | __main__:setup_driver:85 - ChromeDriverの設定が完了しました
+2025-01-16 22:38:59.610 | INFO     | __main__:login:103 - ログイン処理を開始
+2025-01-16 22:39:00.756 | INFO     | __main__:login:105 - 現在のURL: https://crowdworks.jp/login
+2025-01-16 22:39:02.766 | INFO     | __main__:login:112 - ログインフォームの要素を探索中...
+2025-01-16 22:39:02.773 | INFO     | __main__:login:132 - ログインフォームの要素を発見
+2025-01-16 22:39:04.796 | INFO     | __main__:login:156 - ログインボタンをクリック
+2025-01-16 22:39:12.300 | INFO     | __main__:login:165 - ログイン後のURL: https://crowdworks.jp/dashboard
+2025-01-16 22:39:12.303 | INFO     | __main__:login:167 - ログイン成功
+2025-01-16 22:39:12.303 | INFO     | __main__:scrape_jobs:205 - 案件情報の取得を開始
+2025-01-16 22:39:38.389 | ERROR    | __main__:scrape_jobs:275 - 案件一覧の取得中にエラーが発生: Message: 
+
+2025-01-16 22:39:38.424 | INFO     | __main__:save_page_source:199 - ページソースを保存しました: error_jobs_list.html
+2025-01-16 22:39:38.424 | WARNING  | __main__:save_jobs:283 - 保存する案件データがありません
+2025-01-16 22:39:38.599 | INFO     | __main__:run:315 - クローラーを終了します

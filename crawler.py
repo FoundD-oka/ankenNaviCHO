@@ -1,13 +1,14 @@
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from time import sleep
+import time  # timeモジュールをインポート
 from typing import Dict, List
 import random
 import sys
 
 import pandas as pd
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from loguru import logger
 from selenium import webdriver
@@ -16,10 +17,12 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
 
 # ログの設定
-logger.add("logs/crawler_{time}.log", rotation="500 MB")
+logger.remove()  # デフォルトのハンドラを削除
+logger.add("logs/crawler.log", mode="w")  # 上書きモードでログファイルを作成
 
 class CrowdWorksCrawler:
     def __init__(self, email: str, password: str):
@@ -32,6 +35,7 @@ class CrowdWorksCrawler:
         """
         self.base_url = "https://crowdworks.jp"
         self.search_url = f"{self.base_url}/public/jobs/search?order=new"
+        self.login_url = f"{self.base_url}/login"
         self.email = email
         self.password = password
         self.driver = None
@@ -91,7 +95,7 @@ class CrowdWorksCrawler:
             self.wait.until(
                 lambda driver: driver.execute_script("return document.readyState") == "complete"
             )
-            sleep(2)  # 追加の待機時間
+            time.sleep(2)  # sleepをtime.sleepに修正
         except Exception as e:
             logger.error(f"ページの読み込み待機に失敗: {str(e)}")
 
@@ -135,14 +139,14 @@ class CrowdWorksCrawler:
                     arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
                     arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
                 """, form_elements['email'], self.email)
-                sleep(1)
+                time.sleep(1)  # sleepをtime.sleepに修正
                 
                 self.driver.execute_script("""
                     arguments[0].value = arguments[1];
                     arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
                     arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
                 """, form_elements['password'], self.password)
-                sleep(1)
+                time.sleep(1)  # sleepをtime.sleepに修正
 
                 if not form_elements.get('submit'):
                     logger.error("ログインボタンが見つかりません")
@@ -157,7 +161,7 @@ class CrowdWorksCrawler:
                         arguments[0].dispatchEvent(new Event('click', { bubbles: true }));
                     """, form_elements['submit'])
                 
-                sleep(5)  # ログイン処理待機時間を延長
+                time.sleep(5)  # sleepをtime.sleepに修正
 
                 # ログイン成功の確認（URLが変わったことを確認）
                 logger.info(f"ログイン後のURL: {self.driver.current_url}")
@@ -181,7 +185,7 @@ class CrowdWorksCrawler:
     def random_sleep(self, min_seconds=1, max_seconds=3):
         """ランダムな待機時間を設定"""
         sleep_time = random.uniform(min_seconds, max_seconds)
-        sleep(sleep_time)
+        time.sleep(sleep_time)  # sleepをtime.sleepに修正
 
     def simulate_human_input(self, element, text):
         """人間らしい入力をシミュレート"""
@@ -189,81 +193,69 @@ class CrowdWorksCrawler:
             element.send_keys(char)
             self.random_sleep(0.1, 0.3)
 
-    def scrape_jobs(self) -> List[Dict]:
-        """案件情報を取得する"""
-        self.logger.info("案件情報の取得を開始")
-        
-        # 検索ページに移動
-        self.driver.get(self.search_url)
-        time.sleep(random.uniform(2, 4))
-        
-        # ページが完全に読み込まれるまで待機
-        self.wait_for_page_load()
-        
-        # 案件一覧を取得
-        jobs = []
+    def save_page_source(self, filename: str):
+        """ページソースを保存"""
         try:
-            # 案件要素を待機
-            job_elements = WebDriverWait(self.driver, 20).until(
-                EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.item_body"))
-            )
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(self.driver.page_source)
+            self.logger.info(f"ページソースを保存しました: {filename}")
+        except Exception as e:
+            self.logger.error(f"ページソースの保存に失敗: {str(e)}")
+
+    def scrape_jobs(self):
+        try:
+            self.logger.info("案件情報の取得を開始")
+            self.driver.get(self.search_url)
+            time.sleep(5)  # ページの読み込みを待つ
             
-            for job in job_elements:
+            # ページのHTMLを取得してBeautifulSoupで解析
+            html = self.driver.page_source
+            soup = BeautifulSoup(html, 'html.parser')
+            
+            # 案件要素を取得
+            job_elements = soup.find_all('div', class_='UNzN7')
+            jobs_data = []
+            
+            for job_element in job_elements:
                 try:
-                    # タイトルと URL を取得
-                    title_element = job.find_element(By.CSS_SELECTOR, "h3.item_title a")
+                    # タイトルとURL
+                    title_element = job_element.find('h3', class_='iCeus').find('a')
                     title = title_element.text.strip()
-                    url = title_element.get_attribute("href")
+                    url = f"https://crowdworks.jp{title_element['href']}"
                     
-                    # 予算を取得
-                    try:
-                        budget = job.find_element(By.CSS_SELECTOR, "b.amount").text.strip()
-                    except NoSuchElementException:
-                        budget = ""
+                    # 予算
+                    budget_element = job_element.find('span', class_='Yh37y')
+                    budget = budget_element.text.strip() if budget_element else "予算未設定"
                     
-                    # クライアント名を取得
-                    try:
-                        client = job.find_element(By.CSS_SELECTOR, "div.client_name").text.strip()
-                    except NoSuchElementException:
-                        client = ""
+                    # クライアント名
+                    client_element = job_element.find('a', class_='uxHdW')
+                    client = client_element.text.strip() if client_element else "クライアント名非公開"
                     
-                    # 投稿日を取得
-                    try:
-                        posted_date = job.find_element(By.CSS_SELECTOR, "span.post_date").text.strip()
-                    except NoSuchElementException:
-                        posted_date = ""
+                    # 投稿日
+                    posted_date_element = job_element.find('time')
+                    posted_date = posted_date_element['datetime'] if posted_date_element else None
                     
-                    # 本文を取得
-                    try:
-                        description = job.find_element(By.CSS_SELECTOR, "p.item_description").text.strip()
-                        # 「...続きを見る」を削除
-                        description = description.replace("...続きを見る", "")
-                    except NoSuchElementException:
-                        description = ""
-                    
-                    self.logger.info(f"案件を取得: {title}")
-                    self.logger.debug(f"本文: {description[:100]}...")
-                    
-                    jobs.append({
+                    job_data = {
                         "title": title,
                         "url": url,
                         "budget": budget,
                         "client": client,
-                        "description": description,
                         "posted_date": posted_date,
-                        "crawled_at": datetime.datetime.utcnow().isoformat()
-                    })
+                        "crawled_at": datetime.now().isoformat()
+                    }
+                    self.logger.info(f"求人情報を取得しました: {title}")
+                    
+                    jobs_data.append(job_data)
+                    
                 except Exception as e:
-                    self.logger.error(f"案件情報の取得中にエラーが発生: {str(e)}")
+                    self.logger.error(f"案件データの取得中にエラーが発生: {str(e)}")
                     continue
             
-            self.logger.info(f"{len(jobs)}件の案件を取得")
-            return jobs
+            self.logger.info(f"{len(jobs_data)}件の案件を取得")
+            return jobs_data
             
         except Exception as e:
             self.logger.error(f"案件一覧の取得中にエラーが発生: {str(e)}")
-            # ページソースを保存
-            self.save_page_source("error_jobs_list.html")
             return []
 
     def save_jobs(self, jobs: List[Dict]):

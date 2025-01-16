@@ -1,0 +1,10 @@
+2025-01-16 22:36:15.220 | INFO     | __main__:setup_driver:84 - ChromeDriverの設定が完了しました
+2025-01-16 22:36:15.221 | INFO     | __main__:login:102 - ログイン処理を開始
+2025-01-16 22:36:16.404 | INFO     | __main__:login:104 - 現在のURL: https://crowdworks.jp/login
+2025-01-16 22:36:18.411 | INFO     | __main__:login:111 - ログインフォームの要素を探索中...
+2025-01-16 22:36:18.423 | INFO     | __main__:login:131 - ログインフォームの要素を発見
+2025-01-16 22:36:20.462 | INFO     | __main__:login:155 - ログインボタンをクリック
+2025-01-16 22:36:26.566 | INFO     | __main__:login:164 - ログイン後のURL: https://crowdworks.jp/dashboard
+2025-01-16 22:36:26.570 | INFO     | __main__:login:166 - ログイン成功
+2025-01-16 22:36:26.571 | INFO     | __main__:scrape_jobs:195 - 案件情報の取得を開始
+2025-01-16 22:36:27.417 | INFO     | __main__:run:305 - クローラーを終了します
