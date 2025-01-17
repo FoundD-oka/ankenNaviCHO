@@ -27,6 +27,29 @@
     .reason-column {
         width: 200px;
     }
+    .toggle-details {
+        padding: 0.25rem 0.5rem;
+        margin-left: 0.5rem;
+        color: #007bff;
+        background: none;
+        border: 1px solid #007bff;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .toggle-details:hover {
+        background-color: #007bff;
+        color: #fff;
+    }
+    .modal-body {
+        white-space: pre-wrap;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+    .modal-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-right: 2rem;
+    }
 </style>
 {% endblock %}
 
@@ -58,6 +81,13 @@
                     </td>
                     <td class="title-column">
                         <a href="{{ job.url }}" target="_blank">{{ job.title }}</a>
+                        <button class="toggle-details" 
+                                data-toggle="modal" 
+                                data-target="#detailsModal" 
+                                data-title="{{ job.title }}"
+                                data-description="{{ job.detail_description }}">
+                            詳細を表示
+                        </button>
                     </td>
                     <td class="budget-column">{{ job.budget }}</td>
                     <td class="client-column">{{ job.client }}</td>
@@ -69,6 +99,24 @@
         </table>
     </div>
 </div>
+
+<!-- Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1" role="dialog" aria-labelledby="detailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailsModalLabel"></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -76,6 +124,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const checkboxes = document.querySelectorAll('.job-check');
+    const detailsModal = document.getElementById('detailsModal');
     
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
@@ -104,6 +153,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.checked = !checked;  // エラーの場合は元の状態に戻す
             });
         });
+    });
+
+    // モーダルの設定
+    $('#detailsModal').on('show.bs.modal', function (event) {
+        const button = $(event.relatedTarget);
+        const title = button.data('title');
+        const description = button.data('description');
+        
+        const modal = $(this);
+        modal.find('.modal-title').text(title);
+        modal.find('.modal-body').html(description);
     });
 });
 </script>

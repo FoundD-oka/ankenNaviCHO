@@ -130,7 +130,8 @@ def save_filtered_jobs(jobs, base_filename):
     return filtered_filename
 
 # クローリング後の処理を修正
-def process_crawled_data(jobs):
+def process_crawled_data(jobs, crawler=None):
+    """クロール済みデータの処理とGPTフィルタリング"""
     # 現在時刻を取得してファイル名を生成
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     base_filename = f'crawled_data/jobs_{timestamp}.json'
@@ -144,8 +145,18 @@ def process_crawled_data(jobs):
     config = load_config()
     filtered_jobs = filter_jobs_by_gpt(jobs, config)
     
+    # フィルタリング済み案件の詳細情報を取得
+    if crawler and filtered_jobs:
+        print(f"フィルタリング済み案件の詳細情報を取得中...")
+        for job in filtered_jobs:
+            detail_data = crawler.scrape_job_detail(job['url'])
+            job.update(detail_data)
+    
     # フィルタリング済みデータを保存
-    filtered_filename = save_filtered_jobs(filtered_jobs, base_filename)
+    filtered_filename = base_filename.replace('.json', '_filtered.json')
+    with open(filtered_filename, 'w', encoding='utf-8') as f:
+        json.dump(filtered_jobs, f, ensure_ascii=False, indent=2)
+    print(f"フィルタリング済みデータを保存: {filtered_filename}")
     
     return base_filename, filtered_filename
 
@@ -171,7 +182,7 @@ class CrowdWorksCrawler:
     def setup_driver(self):
         """Seleniumドライバーの設定"""
         chrome_options = Options()
-        # chrome_options.add_argument("--headless")  # ヘッドレスモードは一時的に無効化
+        chrome_options.add_argument("--headless=new")  # 新しいヘッドレスモードを使用
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--window-size=1920,1080")
@@ -327,6 +338,40 @@ class CrowdWorksCrawler:
         except Exception as e:
             self.logger.error(f"ページソースの保存に失敗: {str(e)}")
 
+    def scrape_job_detail(self, url: str) -> Dict:
+        """個別の仕事詳細ページから情報を取得"""
+        try:
+            self.logger.info(f"仕事詳細の取得を開始: {url}")
+            self.driver.get(url)
+            time.sleep(3)  # ページの読み込みを待つ
+            
+            # ページのHTMLを取得してBeautifulSoupで解析
+            html = self.driver.page_source
+            soup = BeautifulSoup(html, 'html.parser')
+            
+            # 仕事詳細テーブルを取得
+            detail_table = soup.find('table', class_='job_offer_detail_table')
+            if detail_table:
+                # 改行を保持したまま取得
+                # 1. 不要な空白行を削除
+                # 2. 意味のある改行は保持
+                lines = []
+                for text in detail_table.stripped_strings:
+                    lines.append(text)
+                detail_text = '\n'.join(lines)
+                
+                return {
+                    "detail_description": detail_text,
+                    "crawled_detail_at": datetime.now().isoformat()
+                }
+            else:
+                self.logger.warning(f"仕事詳細が見つかりませんでした: {url}")
+                return {}
+                
+        except Exception as e:
+            self.logger.error(f"仕事詳細の取得中にエラーが発生: {str(e)}")
+            return {}
+
     def scrape_jobs(self):
         try:
             self.logger.info("案件情報の取得を開始")
@@ -368,8 +413,8 @@ class CrowdWorksCrawler:
                         "posted_date": posted_date,
                         "crawled_at": datetime.now().isoformat()
                     }
-                    self.logger.info(f"求人情報を取得しました: {title}")
                     
+                    self.logger.info(f"求人情報を取得しました: {title}")
                     jobs_data.append(job_data)
                     
                 except Exception as e:
@@ -463,8 +508,8 @@ class CrowdWorksCrawler:
                     # 重複チェックを実行
                     unique_jobs = self.check_duplicates(jobs)
                     if unique_jobs:
-                        # GPTフィルタリングを含むデータ処理を実行
-                        base_filename, filtered_filename = process_crawled_data(unique_jobs)
+                        # GPTフィルタリングを含むデータ処理を実行（crawlerインスタンスを渡す）
+                        base_filename, filtered_filename = process_crawled_data(unique_jobs, self)
                         self.logger.info(f"生データを保存: {base_filename}")
                         self.logger.info(f"フィルタリング済みデータを保存: {filtered_filename}")
                     else:

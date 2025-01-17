@@ -36,6 +36,10 @@ def save_checks(checks):
 def index():
     jobs = get_latest_filtered_json()
     checks = load_checks()
+    # 詳細テキストの改行をHTMLの<br>タグに変換
+    for job in jobs:
+        if 'detail_description' in job:
+            job['detail_description'] = job['detail_description'].replace('\n', '<br>')
     return render_template('index.html', jobs=jobs, checks=checks)
 
 @app.route('/update_check', methods=['POST'])
