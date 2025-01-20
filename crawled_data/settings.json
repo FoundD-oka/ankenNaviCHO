@@ -1,0 +1,10 @@
+{
+  "model": "4o-mini",
+  "max_items": 50,
+  "api_key": "",
+  "filter_prompt": "予算が10,000以上。またはライティング関係のものもピックアップする。",
+  "crowdworks_email": "fxonlyjapan@gmail.com",
+  "crowdworks_password": "9915crowd",
+  "coconala_email": "",
+  "coconala_password": ""
+}

@@ -26,12 +26,22 @@ import re
 logger.remove()  # デフォルトのハンドラを削除
 logger.add("logs/crawler.log", mode="w")  # 上書きモードでログファイルを作成
 
-# .envファイルを読み込む
-load_dotenv()
+# 設定ファイルのパス
+SETTINGS_FILE = 'crawled_data/settings.json'
+
+# 設定を読み込む関数
+def load_settings():
+    try:
+        with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"設定ファイルの読み込みに失敗: {str(e)}")
+        return {}
 
 # OpenAI クライアントの初期化
+settings = load_settings()
 client = OpenAI(
-    api_key=os.getenv('OPENAI_API_KEY')
+    api_key=settings.get('api_key', '')
 )
 
 # プロンプトファイルのパス
@@ -39,7 +49,7 @@ PROMPT_FILE = 'prompt.txt'
 
 # デフォルトの設定
 DEFAULT_CONFIG = {
-    "model": "gpt-4",
+    "model": "4o-mini",
     "prompt": "予算が10,000以上のもののみピックする",
     "temperature": 0,
     "max_tokens": 100,
@@ -56,6 +66,7 @@ def load_config():
             if all(key in config for key in required_keys):
                 # response_formatを追加
                 config["response_format"] = { "type": "json_object" }
+                # モデル名をそのまま使用（マッピング不要）
                 return config
             else:
                 print("Warning: Missing required keys in prompt.txt")
@@ -66,10 +77,16 @@ def load_config():
 
 # GPTによる案件フィルタリング
 def filter_jobs_by_gpt(jobs, config):
+    # OpenAI クライアントの再初期化（最新の設定を使用）
+    settings = load_settings()
+    client = OpenAI(api_key=settings.get('api_key', ''))
+    
     filtered_jobs = []
     total_jobs = len(jobs)
     
     print(f"GPTフィルタリングを開始します。対象案件数: {total_jobs}")
+    print(f"使用モデル: {config['model']}")
+    print(f"フィルター条件: {config['prompt']}")
     
     for i, job in enumerate(jobs, 1):
         print(f"案件 {i}/{total_jobs} を処理中...")
@@ -521,13 +538,13 @@ class CrowdWorksCrawler:
             self.logger.info("クローラーを終了します")
 
 if __name__ == "__main__":
-    # 環境変数を読み込み
-    load_dotenv()
-    email = os.getenv("CROWDWORKS_EMAIL")
-    password = os.getenv("CROWDWORKS_PASSWORD")
+    # 設定を読み込み
+    settings = load_settings()
+    email = settings.get('crowdworks_email')
+    password = settings.get('crowdworks_password')
     
     if not email or not password:
-        logger.error("環境変数 CROWDWORKS_EMAIL または CROWDWORKS_PASSWORD が設定されていません")
+        logger.error("CrowdWorksのメールアドレスまたはパスワードが設定されていません")
         sys.exit(1)
     
     # クローラーを実行
