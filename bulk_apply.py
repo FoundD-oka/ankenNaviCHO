@@ -43,6 +43,8 @@ def setup_driver():
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_argument('--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+    chrome_options.add_argument("--suppress-message-center-popups")  # ポップアップを抑制
+    chrome_options.add_argument("--disable-notifications")  # 通知を無効化
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option("useAutomationExtension", False)
     chrome_options.add_experimental_option("detach", True)  # スクリプト終了後もブラウザを開いたままにする
@@ -152,7 +154,9 @@ def apply_to_job(driver, url: str, self_intro: str):
     """個別の案件に応募"""
     try:
         logger.info(f"案件への応募を開始: {url}")
-        driver.get(url)
+        # 新しいタブで開いて、そのタブに切り替える
+        driver.execute_script(f"window.open('{url}', '_blank');")
+        driver.switch_to.window(driver.window_handles[-1])
         wait = WebDriverWait(driver, 20)
         
         # 案件詳細を取得（複数の要素を試行）
