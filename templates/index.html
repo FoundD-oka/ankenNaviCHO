@@ -307,15 +307,16 @@
         
         <div class="form-group">
             <div class="model-label-container">
-                <label for="model-select">モデル</label>
+                <label for="model-select">使用モデル</label>
                 <button type="button" class="api-key-btn" data-toggle="modal" data-target="#apiKeyModal">
                     API Key
                 </button>
             </div>
-            <select class="form-control" id="model-select">
-                <option value="gpt-4o-mini" {% if settings.model == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o-mini</option>
-                <option value="gpt-4o" {% if settings.model == 'gpt-4o' %}selected{% endif %}>GPT-4o</option>
-                <option value="o1-mini" {% if settings.model == 'o1-mini' %}selected{% endif %}>o1-mini</option>
+            <select id="model-select" class="form-control" value="{{ settings.model }}">
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4o-mini">GPT-4o-mini</option>
+                <option value="o1-mini">o1-mini</option>
+                <option value="deepseek-chat">Deepseek Chat</option>
             </select>
         </div>
         
@@ -444,19 +445,23 @@
 </div>
 
 <!-- API Key Modal -->
-<div class="modal fade api-key-modal" id="apiKeyModal" tabindex="-1" role="dialog" aria-labelledby="apiKeyModalLabel" aria-hidden="true">
+<div class="modal fade" id="apiKeyModal" tabindex="-1" role="dialog" aria-labelledby="apiKeyModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="apiKeyModalLabel">API Key設定</h5>
+                <h5 class="modal-title" id="apiKeyModalLabel">API設定</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="api-key-input">API Key</label>
-                    <input type="password" class="form-control" id="api-key-input" placeholder="API Keyを入力してください" value="{{ settings.api_key if settings.api_key else '' }}">
+                    <label for="api-key-input">OpenAI API Key</label>
+                    <input type="password" class="form-control" id="api-key-input" placeholder="OpenAIのAPIキーを入力してください" value="{{ settings.api_key if settings.api_key else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="deepseek-api-key-input">Deepseek API Key</label>
+                    <input type="password" class="form-control" id="deepseek-api-key-input" placeholder="DeepseekのAPIキーを入力してください" value="{{ settings.deepseek_api_key if settings.deepseek_api_key else '' }}">
                 </div>
             </div>
             <div class="modal-footer">
@@ -693,7 +698,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // API Key保存処理
     document.getElementById('save-api-key').addEventListener('click', function() {
         const apiKey = document.getElementById('api-key-input').value;
-        updateSettings({ api_key: apiKey });
+        const deepseekApiKey = document.getElementById('deepseek-api-key-input').value;
+        const model = document.getElementById('model-select').value;
+        
+        updateSettings({
+            api_key: apiKey,
+            deepseek_api_key: deepseekApiKey,
+            model: model
+        });
+        
         $('#apiKeyModal').modal('hide');
     });
 
@@ -819,13 +832,34 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
-            if (data.status !== 'success') {
-                console.error('設定の更新に失敗しました:', data.message);
+            if (data.status === 'success') {
+                showAlert('success', '設定を更新しました');
+            } else {
+                showAlert('danger', 'エラー: ' + data.message);
             }
         })
         .catch(error => {
-            console.error('エラー:', error);
+            showAlert('danger', 'エラー: ' + error.message);
         });
+    }
+
+    // アラート表示関数
+    function showAlert(type, message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.role = 'alert';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        `;
+        document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.container').firstChild);
+        
+        // 3秒後に自動で消える
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 3000);
     }
 });
 </script>

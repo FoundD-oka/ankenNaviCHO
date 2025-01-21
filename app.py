@@ -44,9 +44,11 @@ PROMPT_FILE = 'prompt.txt'
 
 # デフォルト設定
 DEFAULT_SETTINGS = {
-    'model': '4o-mini',
+    'model': 'gpt-4o-mini',
     'max_items': 50,
     'api_key': '',
+    'deepseek_api_key': '',
+    'deepseek_model': 'deepseek-chat',
     'filter_prompt': '',
     'crowdworks_email': '',
     'crowdworks_password': '',
@@ -127,6 +129,8 @@ def update_settings():
             settings['max_items'] = int(data['max_items'])
         if 'api_key' in data:
             settings['api_key'] = data['api_key']
+        if 'deepseek_api_key' in data:
+            settings['deepseek_api_key'] = data['deepseek_api_key']
         if 'filter_prompt' in data:
             settings['filter_prompt'] = data['filter_prompt']
         

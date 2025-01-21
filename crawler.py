@@ -45,6 +45,12 @@ client = OpenAI(
     api_key=settings.get('api_key', '')
 )
 
+# Deepseekクライアントの初期化
+deepseek_client = OpenAI(
+    api_key=settings.get('deepseek_api_key', ''),
+    base_url="https://api.deepseek.com"
+)
+
 # プロンプトファイルのパス
 PROMPT_FILE = 'prompt.txt'
 
@@ -78,14 +84,24 @@ def load_config():
 
 # GPTによる案件フィルタリング
 def filter_jobs_by_gpt(jobs, config):
-    # OpenAI クライアントの再初期化（最新の設定を使用）
+    # 設定の再読み込み
     settings = load_settings()
-    client = OpenAI(api_key=settings.get('api_key', ''))
+    
+    # モデルに応じてクライアントを選択
+    if config['model'] == 'deepseek-chat':
+        client = OpenAI(
+            api_key=settings.get('deepseek_api_key', ''),
+            base_url="https://api.deepseek.com"
+        )
+    else:
+        client = OpenAI(
+            api_key=settings.get('api_key', '')
+        )
     
     filtered_jobs = []
     total_jobs = len(jobs)
     
-    logger.info(f"GPTフィルタリングを開始します。対象案件数: {total_jobs}")
+    logger.info(f"LLMフィルタリングを開始します。対象案件数: {total_jobs}")
     logger.info(f"使用モデル: {config['model']}")
     logger.info(f"フィルター条件: {config['prompt']}")
     
@@ -94,7 +110,7 @@ def filter_jobs_by_gpt(jobs, config):
         logger.info(f"タイトル: {job['title']}")
         logger.info(f"予算: {job['budget']}")
         
-        # GPTに送信するメッセージを作成
+        # LLMに送信するメッセージを作成
         messages = [
             {"role": "system", "content": """あなたは案件の審査員です。与えられた条件に基づいて、案件を評価してください。
 レスポンスは以下のJSON形式で返してください：
@@ -113,7 +129,7 @@ def filter_jobs_by_gpt(jobs, config):
         ]
 
         try:
-            # GPTに問い合わせ（設定を使用）
+            # LLMに問い合わせ（設定を使用）
             response = client.chat.completions.create(
                 model=config['model'],
                 messages=messages,
@@ -124,7 +140,7 @@ def filter_jobs_by_gpt(jobs, config):
             
             # レスポンスを取得してJSONとしてパース
             result = json.loads(response.choices[0].message.content)
-            logger.info(f"GPTの判断: {result}")
+            logger.info(f"LLMの判断: {result}")
             
             # 'yes'の場合のみ案件を追加
             if result.get('decision', '').lower() == 'yes':
@@ -138,12 +154,12 @@ def filter_jobs_by_gpt(jobs, config):
                 logger.info(f"理由: {result.get('reason', '')}")
                 
         except Exception as e:
-            logger.error(f"Error in GPT filtering for job {job['title']}: {e}")
+            logger.error(f"Error in LLM filtering for job {job['title']}: {e}")
             logger.error(f"完全なエラー内容: {str(e)}")
             # エラーの場合は安全のため、その案件を含める
             filtered_jobs.append(job)
     
-    logger.info(f"\nGPTフィルタリング完了。{len(filtered_jobs)}/{total_jobs} 件が条件に適合")
+    logger.info(f"\nLLMフィルタリング完了。{len(filtered_jobs)}/{total_jobs} 件が条件に適合")
     return filtered_jobs
 
 def save_filtered_jobs(jobs, base_filename):

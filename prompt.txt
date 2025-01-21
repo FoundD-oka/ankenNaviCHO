@@ -1,5 +1,5 @@
 {
-  "model": "gpt-4o-mini",
+  "model": "deepseek-chat",
   "prompt": "予算が10,000以上。またはライティング関係のものをピックアップする。",
   "temperature": 0,
   "max_tokens": 100
