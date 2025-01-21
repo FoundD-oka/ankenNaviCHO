@@ -6,6 +6,8 @@ import glob
 from datetime import datetime
 from dotenv import load_dotenv, set_key
 from pathlib import Path
+import subprocess
+import sys
 
 app = Flask(__name__)
 Bootstrap(app)
@@ -152,11 +154,34 @@ def update_settings():
 @app.route('/fetch_new_data', methods=['POST'])
 def fetch_new_data():
     try:
-        # TODO: ここにクローラーを実行する処理を実装
-        return jsonify({
-            'status': 'success',
-            'message': '新規データの取得が完了しました'
-        })
+        # クローラーのパスを取得
+        crawler_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'crawler.py')
+        
+        # Pythonインタープリタのパスを取得
+        python_executable = sys.executable
+        
+        # サブプロセスとしてクローラーを実行
+        process = subprocess.Popen(
+            [python_executable, crawler_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        # 実行結果を取得
+        stdout, stderr = process.communicate()
+        
+        if process.returncode == 0:
+            # 最新のデータを読み込む
+            jobs = get_latest_filtered_json()
+            return jsonify({
+                'status': 'success',
+                'message': '新規データの取得が完了しました',
+                'jobs': jobs
+            })
+        else:
+            raise Exception(f"クローラーの実行に失敗しました: {stderr}")
+            
     except Exception as e:
         return jsonify({
             'status': 'error',
@@ -187,6 +212,44 @@ def check_auth():
             'status': 'error',
             'message': str(e),
             'authenticated': False
+        }), 500
+
+@app.route('/fetch_status')
+def fetch_status():
+    try:
+        # クローラーのログファイルを読み取り
+        log_files = glob.glob('logs/crawler_*.log')
+        if not log_files:
+            log_files = ['logs/crawler.log']
+        
+        latest_log = max(log_files, key=os.path.getctime)
+        
+        with open(latest_log, 'r', encoding='utf-8') as f:
+            # 最後の10行を読み取り
+            lines = f.readlines()[-10:]
+            
+            # ログから進捗状況を解析
+            for line in reversed(lines):
+                if '案件を取得' in line:
+                    return jsonify({
+                        'status': 'running',
+                        'message': f'案件情報を取得中...'
+                    })
+                elif 'GPTフィルタリング' in line:
+                    return jsonify({
+                        'status': 'running',
+                        'message': 'GPTによるフィルタリング中...'
+                    })
+        
+        return jsonify({
+            'status': 'unknown',
+            'message': '処理中...'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
         }), 500
 
 if __name__ == '__main__':

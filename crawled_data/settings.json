@@ -1,8 +1,8 @@
 {
-  "model": "4o-mini",
-  "max_items": 50,
-  "api_key": "",
-  "filter_prompt": "予算が10,000以上。またはライティング関係のものもピックアップする。",
+  "model": "gpt-4o-mini",
+  "max_items": 10,
+  "api_key": "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",
+  "filter_prompt": "予算が10,000以上。またはライティング関係のものをピックアップする。",
   "crowdworks_email": "fxonlyjapan@gmail.com",
   "crowdworks_password": "9915crowd",
   "coconala_email": "",

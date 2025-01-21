@@ -21,6 +21,7 @@ from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from webdriver_manager.chrome import ChromeDriverManager
 from openai import OpenAI
 import re
+import platform
 
 # ログの設定
 logger.remove()  # デフォルトのハンドラを削除
@@ -84,12 +85,15 @@ def filter_jobs_by_gpt(jobs, config):
     filtered_jobs = []
     total_jobs = len(jobs)
     
-    print(f"GPTフィルタリングを開始します。対象案件数: {total_jobs}")
-    print(f"使用モデル: {config['model']}")
-    print(f"フィルター条件: {config['prompt']}")
+    logger.info(f"GPTフィルタリングを開始します。対象案件数: {total_jobs}")
+    logger.info(f"使用モデル: {config['model']}")
+    logger.info(f"フィルター条件: {config['prompt']}")
     
     for i, job in enumerate(jobs, 1):
-        print(f"案件 {i}/{total_jobs} を処理中...")
+        logger.info(f"\n案件 {i}/{total_jobs} を処理中...")
+        logger.info(f"タイトル: {job['title']}")
+        logger.info(f"予算: {job['budget']}")
+        
         # GPTに送信するメッセージを作成
         messages = [
             {"role": "system", "content": """あなたは案件の審査員です。与えられた条件に基づいて、案件を評価してください。
@@ -120,22 +124,26 @@ def filter_jobs_by_gpt(jobs, config):
             
             # レスポンスを取得してJSONとしてパース
             result = json.loads(response.choices[0].message.content)
+            logger.info(f"GPTの判断: {result}")
             
             # 'yes'の場合のみ案件を追加
             if result.get('decision', '').lower() == 'yes':
                 # 判断理由を案件情報に追加
                 job['gpt_reason'] = result.get('reason', '')
                 filtered_jobs.append(job)
-                print(f"✓ 案件が条件に適合: {job['title']}")
+                logger.info(f"✓ 案件が条件に適合: {job['title']}")
+                logger.info(f"理由: {result.get('reason', '')}")
             else:
-                print(f"✗ 案件が条件に不適合: {job['title']}")
+                logger.info(f"✗ 案件が条件に不適合: {job['title']}")
+                logger.info(f"理由: {result.get('reason', '')}")
                 
         except Exception as e:
-            print(f"Error in GPT filtering for job {job['title']}: {e}")
+            logger.error(f"Error in GPT filtering for job {job['title']}: {e}")
+            logger.error(f"完全なエラー内容: {str(e)}")
             # エラーの場合は安全のため、その案件を含める
             filtered_jobs.append(job)
     
-    print(f"GPTフィルタリング完了。{len(filtered_jobs)}/{total_jobs} 件が条件に適合")
+    logger.info(f"\nGPTフィルタリング完了。{len(filtered_jobs)}/{total_jobs} 件が条件に適合")
     return filtered_jobs
 
 def save_filtered_jobs(jobs, base_filename):
@@ -218,7 +226,21 @@ class CrowdWorksCrawler:
         chrome_options.add_experimental_option("prefs", prefs)
         
         try:
-            service = Service(ChromeDriverManager().install())
+            from selenium.webdriver.chrome.service import Service
+            
+            # ChromeDriverのパスを設定
+            driver_path = "./chromedriver"  # プロジェクトルートにchromedriverを配置する前提
+            
+            if not os.path.exists(driver_path):
+                logger.error(f"ChromeDriverが見つかりません: {driver_path}")
+                logger.info("https://chromedriver.chromium.org/downloads からM1 Mac用のChrome Driverをダウンロードし、")
+                logger.info("プロジェクトのルートディレクトリに配置してください。")
+                raise FileNotFoundError(f"ChromeDriver not found at {driver_path}")
+            
+            # 実行権限を付与
+            os.chmod(driver_path, 0o755)
+            
+            service = Service(executable_path=driver_path)
             self.driver = webdriver.Chrome(service=service, options=chrome_options)
             
             # JavaScript注入でWebDriverを検出されないようにする
@@ -395,50 +417,74 @@ class CrowdWorksCrawler:
             self.driver.get(self.search_url)
             time.sleep(5)  # ページの読み込みを待つ
             
-            # ページのHTMLを取得してBeautifulSoupで解析
-            html = self.driver.page_source
-            soup = BeautifulSoup(html, 'html.parser')
-            
-            # 案件要素を取得
-            job_elements = soup.find_all('div', class_='UNzN7')
+            # 設定から最大取得件数を取得
+            settings = load_settings()
+            max_items = settings.get('max_items', 20)  # デフォルトは20件
             jobs_data = []
+            current_page = 1
             
-            for job_element in job_elements:
-                try:
-                    # タイトルとURL
-                    title_element = job_element.find('h3', class_='iCeus').find('a')
-                    title = title_element.text.strip()
-                    url = f"https://crowdworks.jp{title_element['href']}"
-                    
-                    # 予算
-                    budget_element = job_element.find('span', class_='Yh37y')
-                    budget = budget_element.text.strip() if budget_element else "予算未設定"
-                    
-                    # クライアント名
-                    client_element = job_element.find('a', class_='uxHdW')
-                    client = client_element.text.strip() if client_element else "クライアント名非公開"
-                    
-                    # 投稿日
-                    posted_date_element = job_element.find('time')
-                    posted_date = posted_date_element['datetime'] if posted_date_element else None
-                    
-                    job_data = {
-                        "title": title,
-                        "url": url,
-                        "budget": budget,
-                        "client": client,
-                        "posted_date": posted_date,
-                        "crawled_at": datetime.now().isoformat()
-                    }
-                    
-                    self.logger.info(f"求人情報を取得しました: {title}")
-                    jobs_data.append(job_data)
-                    
-                except Exception as e:
-                    self.logger.error(f"案件データの取得中にエラーが発生: {str(e)}")
-                    continue
+            while len(jobs_data) < max_items:
+                # ページのHTMLを取得してBeautifulSoupで解析
+                html = self.driver.page_source
+                soup = BeautifulSoup(html, 'html.parser')
+                
+                # 案件要素を取得
+                job_elements = soup.find_all('div', class_='UNzN7')
+                
+                for job_element in job_elements:
+                    if len(jobs_data) >= max_items:
+                        break
+                        
+                    try:
+                        # タイトルとURL
+                        title_element = job_element.find('h3', class_='iCeus').find('a')
+                        title = title_element.text.strip()
+                        url = f"https://crowdworks.jp{title_element['href']}"
+                        
+                        # 予算
+                        budget_element = job_element.find('span', class_='Yh37y')
+                        budget = budget_element.text.strip() if budget_element else "予算未設定"
+                        
+                        # クライアント名
+                        client_element = job_element.find('a', class_='uxHdW')
+                        client = client_element.text.strip() if client_element else "クライアント名非公開"
+                        
+                        # 投稿日
+                        posted_date_element = job_element.find('time')
+                        posted_date = posted_date_element['datetime'] if posted_date_element else None
+                        
+                        job_data = {
+                            "title": title,
+                            "url": url,
+                            "budget": budget,
+                            "client": client,
+                            "posted_date": posted_date,
+                            "crawled_at": datetime.now().isoformat()
+                        }
+                        
+                        self.logger.info(f"求人情報を取得しました: {title}")
+                        jobs_data.append(job_data)
+                        
+                    except Exception as e:
+                        self.logger.error(f"案件データの取得中にエラーが発生: {str(e)}")
+                        continue
+                
+                # 次のページが存在し、まだ必要な件数に達していない場合は次ページへ
+                if len(jobs_data) < max_items:
+                    try:
+                        next_button = self.driver.find_element(By.XPATH, '//*[@id="vue-container"]/div/div[2]/div/div[3]/div[2]/section/div[4]/a')
+                        self.driver.execute_script("arguments[0].click();", next_button)
+                        current_page += 1
+                        self.logger.info(f"次のページ（{current_page}ページ目）に移動します")
+                        time.sleep(5)  # ページ遷移を待つ
+                    except NoSuchElementException:
+                        self.logger.info("最後のページに到達しました")
+                        break
+                    except Exception as e:
+                        self.logger.error(f"ページ遷移中にエラーが発生: {str(e)}")
+                        break
             
-            self.logger.info(f"{len(jobs_data)}件の案件を取得")
+            self.logger.info(f"合計{len(jobs_data)}件の案件を取得しました（{current_page}ページ分）")
             return jobs_data
             
         except Exception as e:
