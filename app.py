@@ -8,9 +8,15 @@ from dotenv import load_dotenv, set_key
 from pathlib import Path
 import subprocess
 import sys
+from bulk_apply import register_bulk_apply_routes, init_bulk_apply
 
 app = Flask(__name__)
 Bootstrap(app)
+
+# 一括応募機能の初期化
+init_bulk_apply()
+# 一括応募ルートの登録
+register_bulk_apply_routes(app)
 
 # 最新のフィルタリング済みJSONファイルを取得する関数
 def get_latest_filtered_json():

@@ -385,6 +385,19 @@
                             {% endfor %}
                         </tbody>
                     </table>
+                    <!-- 一括応募ボタンを追加 -->
+                    <div class="bulk-apply-container text-center mt-4 mb-4">
+                        <button id="bulk-apply-btn" class="btn btn-primary btn-lg">
+                            一括応募
+                        </button>
+                        <!-- 進捗表示用のプログレスバー（初期状態は非表示） -->
+                        <div class="progress-container mt-3" style="display: none;">
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                            </div>
+                            <div class="progress-status text-center mt-2">処理待機中...</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -507,6 +520,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const checkboxes = document.querySelectorAll('.job-check');
     const detailsModal = document.getElementById('detailsModal');
+    const bulkApplyBtn = document.getElementById('bulk-apply-btn');
     
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
@@ -552,6 +566,102 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.find('.modal-client').text(client);
         modal.find('.modal-posted-date').text(postedDate);
         modal.find('.modal-description').html(description);
+    });
+
+    // 一括応募ボタンのイベントリスナー
+    bulkApplyBtn.addEventListener('click', async function() {
+        // チェックされた案件を取得
+        const checkedJobs = Array.from(document.querySelectorAll('.job-check:checked')).map(checkbox => {
+            return checkbox.dataset.url;
+        });
+
+        if (checkedJobs.length === 0) {
+            showAlert('warning', '応募する案件を選択してください。');
+            return;
+        }
+
+        if (!confirm(`選択された${checkedJobs.length}件の案件に一括応募します。よろしいですか？`)) {
+            return;
+        }
+
+        const button = this;
+        const progressContainer = document.querySelector('.bulk-apply-container .progress-container');
+        const progressBar = progressContainer.querySelector('.progress-bar');
+        const progressStatus = progressContainer.querySelector('.progress-status');
+
+        try {
+            button.disabled = true;
+            progressContainer.style.display = 'block';
+
+            const response = await fetch('/bulk_apply', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    urls: checkedJobs
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('応募処理に失敗しました');
+            }
+
+            // Server-Sent Eventsを使用して進捗を監視
+            const eventSource = new EventSource('/bulk_apply_progress');
+            
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                const progress = (data.current / data.total) * 100;
+                
+                progressBar.style.width = `${progress}%`;
+                progressBar.setAttribute('aria-valuenow', progress);
+                progressBar.textContent = `${Math.round(progress)}%`;
+                
+                // 進捗状況の表示を改善
+                if (data.status.includes('\n')) {
+                    // 最終サマリーの場合
+                    progressStatus.innerHTML = data.status.replace(/\n/g, '<br>');
+                } else {
+                    progressStatus.textContent = data.status;
+                }
+
+                if (data.completed) {
+                    eventSource.close();
+                    button.disabled = false;
+                    
+                    // 詳細な結果をモーダルで表示
+                    let resultMessage = data.status;
+                    if (data.details) {
+                        resultMessage += '<br><br>処理詳細:<br>' +
+                            data.details.map(msg => msg.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join('<br>');
+                    }
+                    
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        showAlert('info', `
+                            <div class="result-summary">
+                                ${resultMessage}
+                            </div>
+                            <div class="mt-3">
+                                各タブで内容を確認し、送信してください。
+                            </div>
+                        `);
+                    }, 1000);
+                }
+            };
+
+            eventSource.onerror = function() {
+                eventSource.close();
+                throw new Error('進捗の監視に失敗しました');
+            };
+
+        } catch (error) {
+            console.error('Error:', error);
+            button.disabled = false;
+            progressContainer.style.display = 'none';
+            showAlert('danger', error.message);
+        }
     });
 
     // 新規情報取得ボタンのイベントリスナー
