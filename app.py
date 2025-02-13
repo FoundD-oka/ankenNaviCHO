@@ -1,5 +1,8 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 from flask_bootstrap import Bootstrap
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_wtf.csrf import CSRFProtect
+from functools import wraps
 import json
 import os
 import glob
@@ -9,9 +12,69 @@ from pathlib import Path
 import subprocess
 import sys
 from bulk_apply import register_bulk_apply_routes, init_bulk_apply
+from supabase import create_client, Client
+
+# 環境変数の読み込み
+load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'your-secret-key-here')
 Bootstrap(app)
+csrf = CSRFProtect(app)
+
+# Supabaseクライアントの初期化
+supabase: Client = create_client(
+    os.getenv('SUPABASE_URL'),
+    os.getenv('SUPABASE_ANON_KEY')
+)
+
+# ログイン管理の初期化
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'このページにアクセスするにはログインが必要です。'
+
+# ユーザーモデル
+class User(UserMixin):
+    def __init__(self, user_id, email, avatar_url=None):
+        self.id = user_id
+        self.email = email
+        self.avatar_url = avatar_url or f"https://www.gravatar.com/avatar/{user_id}?d=mp"
+
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        if 'access_token' in session:
+            # セッションに保存されているトークンを使用
+            user = supabase.auth.get_user(session['access_token']).user
+            if user:
+                # Get user metadata which includes avatar_url
+                user_metadata = user.user_metadata
+                avatar_url = user_metadata.get('avatar_url') if user_metadata else None
+                return User(user.id, user.email, avatar_url)
+    except Exception as e:
+        print(f"Error loading user: {e}")
+    return None
+
+# 認証必須のデコレータ
+def auth_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or 'access_token' not in session:
+            logout_user()
+            session.clear()
+            return redirect(url_for('login'))
+        try:
+            # セッションのアクセストークンを検証
+            user_data = supabase.auth.get_user(session['access_token'])
+            if not user_data:
+                raise Exception("Invalid session")
+        except Exception:
+            logout_user()
+            session.clear()
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # 一括応募機能の初期化
 init_bulk_apply()
@@ -97,7 +160,87 @@ def load_settings():
     
     return settings
 
+# 認証関連のルート
+@app.route('/login')
+def login():
+    # ログイン後のリダイレクト先をセッションに保存
+    if not current_user.is_authenticated:
+        return render_template('login.html')
+    return redirect(url_for('index'))
+
+@app.route('/login/google')
+def login_with_google():
+    try:
+        redirect_url = 'http://localhost:3000/auth/callback'
+        response = supabase.auth.sign_in_with_oauth({
+            "provider": "google",
+            "options": {
+                "redirect_to": redirect_url,
+                "scopes": "email profile"
+            }
+        })
+        if not response.url:
+            raise Exception("認証URLが取得できませんでした")
+        return redirect(response.url)
+    except Exception as e:
+        flash(f'ログインエラー: {str(e)}', 'error')
+        return redirect(url_for('login'))
+
+@app.route('/auth/callback')
+def auth_callback():
+    try:
+        access_token = request.args.get('access_token')
+        if access_token:
+            try:
+                # アクセストークンをセッションに保存
+                session['access_token'] = access_token
+                # ユーザー情報を取得
+                user_response = supabase.auth.get_user(access_token)
+                user_metadata = user_response.user.user_metadata
+                avatar_url = user_metadata.get('avatar_url') if user_metadata else None
+                user = User(user_response.user.id, user_response.user.email, avatar_url)
+                login_user(user)
+                flash('ログインしました', 'success')
+                return redirect(url_for('index'))
+            except Exception as e:
+                print(f"Auth error: {str(e)}")
+                flash('認証エラーが発生しました', 'error')
+                return redirect(url_for('login'))
+    except Exception as e:
+        flash(f'認証エラー: {str(e)}', 'error')
+    return redirect(url_for('login'))
+
+@app.route('/logout', methods=['GET', 'POST'])
+@login_required
+def logout():
+    try:
+        # Supabaseのセッションを終了
+        if 'access_token' in session:
+            try:
+                supabase.auth.sign_out(session['access_token'])
+            except:
+                pass  # Supabaseのエラーは無視
+            
+        # Flaskのセッションとログイン状態をクリア
+        logout_user()
+        session.clear()
+        
+        # 新しいCSRFトークンを生成
+        csrf = CSRFProtect(app)
+        csrf.generate_token()
+        
+        flash('ログアウトしました', 'success')
+        return redirect(url_for('login'))
+    except Exception as e:
+        # エラー時も確実にセッションをクリア
+        logout_user()
+        session.clear()
+        flash(f'ログアウトエラー: {str(e)}', 'error')
+        return redirect(url_for('login'))
+
+# メインのルート（認証必須）
 @app.route('/')
+@auth_required
 def index():
     jobs = get_latest_filtered_json()
     checks = load_checks()
@@ -109,6 +252,7 @@ def index():
     return render_template('index.html', jobs=jobs, checks=checks, settings=settings)
 
 @app.route('/update_check', methods=['POST'])
+@auth_required
 def update_check():
     data = request.get_json()
     job_url = data.get('url')
@@ -123,6 +267,7 @@ def update_check():
     return jsonify({'status': 'success'})
 
 @app.route('/update_settings', methods=['POST'])
+@auth_required
 def update_settings():
     try:
         data = request.get_json()
@@ -162,6 +307,7 @@ def update_settings():
         }), 500
 
 @app.route('/fetch_new_data', methods=['POST'])
+@auth_required
 def fetch_new_data():
     try:
         # クローラーのパスを取得
@@ -199,6 +345,7 @@ def fetch_new_data():
         }), 500
 
 @app.route('/check_auth', methods=['POST'])
+@auth_required
 def check_auth():
     try:
         data = request.get_json()
@@ -225,6 +372,7 @@ def check_auth():
         }), 500
 
 @app.route('/fetch_status')
+@auth_required
 def fetch_status():
     try:
         # クローラーのログファイルを読み取り
@@ -263,4 +411,4 @@ def fetch_status():
         }), 500
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(host='0.0.0.0', port=3000, debug=True)

@@ -53,6 +53,53 @@
         transition: all 0.3s;
     }
     
+    .user-info {
+        padding: 10px 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #2c3136;
+        position: relative;
+    }
+    
+    .user-avatar-container {
+        cursor: pointer;
+    }
+
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        transition: transform 0.2s;
+    }
+
+    .user-avatar:hover {
+        transform: scale(1.1);
+    }
+
+    .logout-toast {
+        position: absolute;
+        top: 100%;
+        background: #fff;
+        color: #333;
+        padding: 8px 16px;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        z-index: 1000;
+        cursor: pointer;
+        display: none;
+        animation: fadeIn 0.2s ease-in-out;
+    }
+
+    .logout-toast:hover {
+        background: #f8f9fa;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
     .table-container {
         margin-top: 2rem;
         margin-bottom: 2rem;
@@ -280,6 +327,17 @@
         <div class="sidebar-header">
             <h3>案件naviCHO</h3>
         </div>
+
+        <!-- ユーザーアバター -->
+        <div class="user-info">
+            <div class="user-avatar-container" id="user-avatar-container">
+                <img src="{{ current_user.avatar_url }}" alt="User avatar" class="user-avatar">
+                <div class="logout-toast" id="logout-toast">ログアウト</div>
+                <form id="logout-form" action="{{ url_for('logout') }}" method="POST" style="display: none;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                </form>
+            </div>
+        </div>
         
         <button class="btn btn-primary btn-fetch">新規情報の取得</button>
         
@@ -335,6 +393,19 @@
     <!-- Page Content -->
     <div id="content">
         <div class="container-fluid">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
             <!-- ジョブ一覧ビュー -->
             <div class="view-container active" id="jobs-view">
                 <h2 class="mb-4">クラウドワークス案件一覧</h2>
@@ -518,6 +589,36 @@
 {{super()}}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // アバターとトーストの要素を取得
+    const avatarContainer = document.getElementById('user-avatar-container');
+    const logoutToast = document.getElementById('logout-toast');
+    const logoutForm = document.getElementById('logout-form');
+    let toastTimeout;
+
+    // アバタークリックでトースト表示
+    avatarContainer.addEventListener('click', function(e) {
+        logoutToast.style.display = 'block';
+        clearTimeout(toastTimeout);
+        
+        // 3秒後に自動で非表示
+        toastTimeout = setTimeout(() => {
+            logoutToast.style.display = 'none';
+        }, 3000);
+    });
+
+    // トーストクリックでログアウト
+    logoutToast.addEventListener('click', function(e) {
+        e.stopPropagation(); // アバターのクリックイベントを停止
+        logoutForm.submit();
+    });
+
+    // 他の場所をクリックしたらトーストを非表示
+    document.addEventListener('click', function(e) {
+        if (!avatarContainer.contains(e.target)) {
+            logoutToast.style.display = 'none';
+        }
+    });
+
     const checkboxes = document.querySelectorAll('.job-check');
     const detailsModal = document.getElementById('detailsModal');
     const bulkApplyBtn = document.getElementById('bulk-apply-btn');

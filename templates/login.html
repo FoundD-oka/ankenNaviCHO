@@ -1,0 +1,124 @@
+{% extends "bootstrap/base.html" %}
+
+{% block title %}ログイン{% endblock %}
+
+{% block styles %}
+{{super()}}
+<style>
+    .login-container {
+        max-width: 400px;
+        margin: 100px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .login-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .login-header h1 {
+        font-size: 24px;
+        color: #333;
+        margin-bottom: 10px;
+    }
+    
+    .login-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 4px;
+        background: #fff;
+        border: 1px solid #ddd;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .login-btn:hover {
+        background: #f8f9fa;
+        border-color: #ced4da;
+    }
+    
+    .google-icon {
+        width: 24px;
+        height: 24px;
+        margin-right: 12px;
+    }
+
+    .flash-messages {
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+{{super()}}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // URLハッシュからトークンを取得
+        const hash = window.location.hash;
+        if (hash) {
+            const params = new URLSearchParams(hash.substring(1));
+            const accessToken = params.get('access_token');
+            if (accessToken) {
+                // トークンをサーバーに送信
+                fetch('/auth/callback?access_token=' + encodeURIComponent(accessToken), {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                })
+                .then(response => response.text())
+                .then(result => {
+                    // リダイレクトされた場合は新しいURLに移動
+                    if (result.includes('redirect')) {
+                        window.location.href = '/';
+                    } else {
+                        window.location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('認証エラー:', error);
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="login-container">
+        <div class="login-header">
+            <h1>案件naviCHO</h1>
+            <p>ログインして利用を開始</p>
+        </div>
+
+        <!-- フラッシュメッセージ -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Googleログインボタン -->
+        <a href="{{ url_for('login_with_google') }}" class="login-btn">
+            <img src="https://www.google.com/favicon.ico" alt="Google" class="google-icon">
+            Googleでログイン
+        </a>
+    </div>
+</div>
+{% endblock %}
