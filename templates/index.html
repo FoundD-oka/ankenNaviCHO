@@ -294,6 +294,95 @@
         padding: 0 8px;
         border-radius: 3px;
     }
+
+    /* トースト通知のスタイル */
+    .toast-notification {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: #333;
+        color: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 9999;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+    }
+
+    .toast-notification.success {
+        background: #28a745;
+    }
+
+    .toast-notification.error {
+        background: #dc3545;
+    }
+
+    .toast-notification.warning {
+        background: #ffc107;
+        color: #333;
+    }
+
+    .toast-notification.show {
+        opacity: 1;
+    }
+
+    /* フィルター設定トースト用スタイル */
+    .filter-settings-toast {
+        max-width: 700px;
+        width: 90%;
+        max-height: 300px; /* トーストの高さを制限 */
+        overflow-y: auto; /* 内容が多い場合はスクロール可能に */
+        background: rgba(255, 255, 255, 0.98);
+        color: #333;
+        padding: 15px 20px;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        display: none;
+        position: fixed;
+        left: 270px; /* サイドバーの幅(250px) + 最小余白 */
+        top: 650px; /* フィルター設定ボタンにより近い位置 */
+        z-index: 9999;
+        border-radius: 8px;
+        backdrop-filter: blur(5px);
+    }
+
+    .filter-settings-toast.show {
+        display: block;
+        opacity: 1;
+    }
+
+    .filter-settings-toast .filter-settings {
+        background: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .filter-settings-toast textarea {
+        min-height: 125px;
+        font-size: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .filter-settings-toast h5 {
+        font-size: 2.0rem;
+        font-weight: bold;
+        margin-bottom: 0.8rem;
+    }
+
+    .filter-settings-toast .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .filter-settings-toast label {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        font-size: 1.6rem;
+    }
+
+    .filter-settings-toast .text-muted {
+        margin-bottom: 0.8rem;
+        font-size: 1.4rem;
+    }
     
     .progress-container progress {
         width: 100%;
@@ -472,17 +561,19 @@
                 </div>
             </div>
 
-            <!-- フィルター設定ビュー -->
-            <div class="view-container" id="filter-view">
-                <h2 class="mb-4">フィルター設定</h2>
+            <!-- フィルター設定トースト -->
+            <div class="toast-notification filter-settings-toast" style="display: none;">
                 <div class="filter-settings">
-                    <div class="form-group">
-                        <label for="filter-prompt">フィルター条件</label>
-                        <p class="text-muted">案件をフィルタリングするための条件を入力してください。</p>
-                        <textarea class="form-control" id="filter-prompt" 
+                    <h5>フィルター設定</h5>
+                    <div class="form-group mt-3">
+                        <p class="text-muted small">案件をフィルタリングするための条件を入力してください。</p>
+                        <textarea class="form-control" id="filter-prompt"
                                 placeholder="例: 予算が10,000円以上で、Pythonに関連する案件のみ選択">{{ settings.filter_prompt }}</textarea>
                     </div>
-                    <button class="btn btn-secondary btn-disabled" id="save-filter" disabled>保存</button>
+                    <div class="d-flex justify-content-end mt-4">
+                        <button class="btn btn-secondary mr-4" id="close-filter" style="min-width: 150px; font-size: 1.3rem; padding: 10px 20px;">閉じる</button>
+                        <button class="btn btn-primary" id="save-filter" style="min-width: 150px; font-size: 1.3rem; padding: 10px 20px;">保存</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -925,18 +1016,25 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelector('.filter-settings-link').addEventListener('click', function(e) {
         e.preventDefault();
         
-        // ビューを切り替え
-        const views = document.querySelectorAll('.view-container');
-        views.forEach(view => view.classList.remove('active'));
-        document.getElementById('filter-view').classList.add('active');
+        // トースト表示
+        const filterToast = document.querySelector('.filter-settings-toast');
+        filterToast.style.display = 'block';
+        setTimeout(() => {
+            filterToast.classList.add('show');
+        }, 10);
         
         // フィルター設定の初期状態を設定
         const filterPrompt = document.getElementById('filter-prompt');
         originalFilterPrompt = filterPrompt.value;
-        const saveFilterBtn = document.getElementById('save-filter');
-        saveFilterBtn.classList.remove('btn-primary');
-        saveFilterBtn.classList.add('btn-secondary', 'btn-disabled');
-        saveFilterBtn.disabled = true;
+    });
+
+    // フィルター設定を閉じる
+    document.getElementById('close-filter').addEventListener('click', function() {
+        const filterToast = document.querySelector('.filter-settings-toast');
+        filterToast.classList.remove('show');
+        setTimeout(() => {
+            filterToast.style.display = 'none';
+        }, 300);
     });
 
     // サービスリンクのクリック処理
@@ -1001,20 +1099,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // フィルター設定の変更監視
     let originalFilterPrompt = document.getElementById('filter-prompt').value;
-    const saveFilterBtn = document.getElementById('save-filter');
     
     document.getElementById('filter-prompt').addEventListener('input', function() {
         const currentValue = this.value;
+        const saveFilterBtn = document.getElementById('save-filter');
         const hasChanged = currentValue !== originalFilterPrompt;
         
         if (hasChanged) {
-            saveFilterBtn.classList.remove('btn-secondary', 'btn-disabled');
             saveFilterBtn.classList.add('btn-primary');
-            saveFilterBtn.disabled = false;
+            saveFilterBtn.classList.remove('btn-secondary');
         } else {
             saveFilterBtn.classList.remove('btn-primary');
-            saveFilterBtn.classList.add('btn-secondary', 'btn-disabled');
-            saveFilterBtn.disabled = true;
+            saveFilterBtn.classList.add('btn-secondary');
         }
     });
 
@@ -1023,13 +1119,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const filterPrompt = document.getElementById('filter-prompt').value;
         updateSettings({ filter_prompt: filterPrompt });
         
-        // 保存後に状態をリセット
-        originalFilterPrompt = filterPrompt;
-        this.classList.remove('btn-primary');
-        this.classList.add('btn-secondary', 'btn-disabled');
-        this.disabled = true;
+        // 保存後にトーストを閉じる
+        const filterToast = document.querySelector('.filter-settings-toast');
+        filterToast.classList.remove('show');
+        setTimeout(() => {
+            filterToast.style.display = 'none';
+            // 完了通知を表示
+            showToast('フィルター設定を保存しました', 'success');
+        }, 300);
         
-        alert('フィルター設定を保存しました');
+        // 値を保存
+        originalFilterPrompt = filterPrompt;
     });
 
     // 設定を更新する関数
@@ -1070,6 +1170,36 @@ document.addEventListener('DOMContentLoaded', function() {
         // 3秒後に自動で消える
         setTimeout(() => {
             alertDiv.remove();
+        }, 3000);
+    }
+    
+    // トースト通知表示関数
+    function showToast(message, type = 'success') {
+        // 既存のトーストを削除
+        const existingToast = document.querySelector('.toast-notification');
+        if (existingToast) {
+            existingToast.remove();
+        }
+
+        // 新しいトーストを作成
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${type}`;
+        toast.textContent = message;
+
+        // bodyに追加
+        document.body.appendChild(toast);
+
+        // アニメーションのためにshowクラスを追加
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+
+        // 3秒後に消える
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
         }, 3000);
     }
 });
