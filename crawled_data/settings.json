@@ -1,10 +1,10 @@
 {
-  "model": "gpt-4o-mini",
+  "model": "deepseek-chat",
   "max_items": 10,
   "api_key": "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",
   "deepseek_api_key": "sk-b3abfbc52660430295cf5521b3d93b2d",
   "deepseek_model": "deepseek-chat",
-  "filter_prompt": "予算が10,000以上。またはライティング関係のものをピックアップする。",
+  "filter_prompt": "予算が5,000以上。またはライティング関係のものをピックアップする。",
   "crowdworks_email": "fxonlyjapan@gmail.com",
   "crowdworks_password": "9915crowd",
   "coconala_email": "",
