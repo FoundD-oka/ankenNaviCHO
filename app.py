@@ -17,6 +17,7 @@ from supabase import create_client, Client
 import logging
 import re
 from openai import OpenAI
+from updater import check_for_updates, perform_update, get_update_status
 
 # ロガーの設定
 logging.basicConfig(
@@ -1154,6 +1155,44 @@ def clear_old_data_api():
             user_message="古い案件データの削除に失敗しました。",
             status_code=500
         )
+
+# アップデート確認エンドポイント
+@app.route('/api/check_updates', methods=['POST'])
+@auth_required
+def check_updates_api():
+    """
+    最新バージョンの確認を行うAPI
+    """
+    try:
+        update_available = check_for_updates()
+        return jsonify(get_update_status())
+    except Exception as e:
+        return handle_error(e, "アップデート確認エラー", "更新の確認中にエラーが発生しました。")
+
+# アップデート実行エンドポイント
+@app.route('/api/perform_update', methods=['POST'])
+@auth_required
+def perform_update_api():
+    """
+    アップデートを実行するAPI
+    """
+    try:
+        result = perform_update()
+        return jsonify(result)
+    except Exception as e:
+        return handle_error(e, "アップデート実行エラー", "更新の実行中にエラーが発生しました。")
+
+# アップデートステータス取得エンドポイント
+@app.route('/api/update_status', methods=['GET'])
+@auth_required
+def update_status_api():
+    """
+    アップデートの進捗状況を取得するAPI
+    """
+    try:
+        return jsonify(get_update_status())
+    except Exception as e:
+        return handle_error(e, "ステータス取得エラー", "更新状態の取得中にエラーが発生しました。")
 
 if __name__ == '__main__':
     # 起動時に古いデータを削除
