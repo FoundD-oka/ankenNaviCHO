@@ -459,11 +459,11 @@
                     API Key
                 </button>
             </div>
-            <select id="model-select" class="form-control" value="{{ settings.model }}">
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="gpt-4o-mini">GPT-4o-mini</option>
-                <option value="o1-mini">o1-mini</option>
-                <option value="deepseek-chat">Deepseek Chat</option>
+            <select id="model-select" class="form-control">
+                <option value="gpt-4o" {% if settings.model == 'gpt-4o' %}selected{% endif %}>GPT-4o</option>
+                <option value="gpt-4o-mini" {% if settings.model == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o-mini</option>
+                <option value="o1-mini" {% if settings.model == 'o1-mini' %}selected{% endif %}>o1-mini</option>
+                <option value="deepseek-chat" {% if settings.model == 'deepseek-chat' %}selected{% endif %}>Deepseek Chat</option>
             </select>
         </div>
         
@@ -685,6 +685,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const logoutToast = document.getElementById('logout-toast');
     const logoutForm = document.getElementById('logout-form');
     let toastTimeout;
+
+    // モデル選択の初期化
+    const modelSelect = document.getElementById('model-select');
+    if (modelSelect) {
+        // サーバーから渡されたモデル設定を取得（Jinja2テンプレート変数）
+        const savedModel = '{{ settings.model }}';
+        if (savedModel) {
+            // 対応するオプションを選択
+            for (let i = 0; i < modelSelect.options.length; i++) {
+                if (modelSelect.options[i].value === savedModel) {
+                    modelSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+    }
 
     // アバタークリックでトースト表示
     avatarContainer.addEventListener('click', function(e) {

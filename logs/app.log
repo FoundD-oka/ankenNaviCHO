@@ -185,3 +185,14 @@
 2025-03-17 16:08:34,497 - werkzeug - INFO -  * Restarting with stat
 2025-03-17 16:08:35,236 - werkzeug - WARNING -  * Debugger is active!
 2025-03-17 16:08:35,245 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 18:28:26,472 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.50.18:3000
+2025-03-17 18:28:26,472 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-03-17 18:28:26,473 - werkzeug - INFO -  * Restarting with stat
+2025-03-17 18:28:26,910 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 18:28:26,917 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 18:28:30,077 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 18:28:30,137 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 18:28:30,155 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 18:28:30] "GET / HTTP/1.1" 200 -
