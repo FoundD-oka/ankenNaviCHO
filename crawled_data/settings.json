@@ -1,5 +1,5 @@
 {
-  "model": "deepseek-chat",
+  "model": "gpt-4o-mini",
   "max_items": 10,
   "api_key": "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",
   "deepseek_api_key": "sk-b3abfbc52660430295cf5521b3d93b2d",

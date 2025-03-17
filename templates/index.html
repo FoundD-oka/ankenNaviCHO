@@ -909,8 +909,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch('/fetch_new_data', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
-                }
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({}) // 空のJSONオブジェクトを送信
             });
             
             const data = await response.json();
@@ -1138,6 +1140,7 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
             },
             body: JSON.stringify(settings)
         })

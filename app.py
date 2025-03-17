@@ -22,6 +22,9 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', 'your-secret-key-here')
 Bootstrap(app)
 csrf = CSRFProtect(app)
 
+# CSRFトークンをAjaxリクエストでも検証するように設定
+csrf.exempt_views = []
+
 # Supabaseクライアントの初期化
 supabase: Client = create_client(
     os.getenv('SUPABASE_URL'),
@@ -270,7 +273,19 @@ def update_check():
 @auth_required
 def update_settings():
     try:
-        data = request.get_json()
+        try:
+            data = request.get_json(silent=True)
+            if data is None:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'リクエストボディが無効です。JSONデータを送信してください。'
+                }), 400
+        except Exception as e:
+            return jsonify({
+                'status': 'error',
+                'message': f'リクエストの解析に失敗しました: {str(e)}'
+            }), 400
+            
         settings = load_settings()
         
         # 更新する設定項目を処理
@@ -310,6 +325,12 @@ def update_settings():
 @auth_required
 def fetch_new_data():
     try:
+        # リクエストボディを取得（空でも問題ない）
+        try:
+            data = request.get_json(silent=True) or {}
+        except:
+            data = {}
+            
         # クローラーのパスを取得
         crawler_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'crawler.py')
         

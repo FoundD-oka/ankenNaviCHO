@@ -23,6 +23,9 @@ from openai import OpenAI
 import re
 import platform
 
+# 環境変数の読み込み
+load_dotenv()
+
 # ログの設定
 logger.remove()  # デフォルトのハンドラを削除
 logger.add("logs/crawler.log", mode="w")  # 上書きモードでログファイルを作成
@@ -245,7 +248,8 @@ class CrowdWorksCrawler:
             from selenium.webdriver.chrome.service import Service
             
             # ChromeDriverのパスを設定
-            driver_path = "./chromedriver"  # プロジェクトルートにchromedriverを配置する前提
+            # 環境変数から取得するか、デフォルトのパスを使用
+            driver_path = os.getenv('SELENIUM_DRIVER_PATH', './chromedriver')
             
             if not os.path.exists(driver_path):
                 logger.error(f"ChromeDriverが見つかりません: {driver_path}")
