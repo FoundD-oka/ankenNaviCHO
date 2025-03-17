@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 CURRENT_VERSION = "0.4.3"
 
 # GitHubリポジトリ情報
-GITHUB_REPO_OWNER = "your-username"  # GitHubのユーザー名に置き換えてください
+GITHUB_REPO_OWNER = "FoundD-oka"
 GITHUB_REPO_NAME = "ankenNaviCHO"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/releases/latest"
 
