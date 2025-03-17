@@ -7,12 +7,66 @@ import json
 import os
 import glob
 from datetime import datetime
+import traceback
 from dotenv import load_dotenv, set_key
 from pathlib import Path
 import subprocess
 import sys
 from bulk_apply import register_bulk_apply_routes, init_bulk_apply
 from supabase import create_client, Client
+import logging
+
+# ロガーの設定
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('logs/app.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+# エラーハンドリングのためのユーティリティ関数
+def handle_error(e, error_type="一般エラー", user_message=None, status_code=500):
+    """
+    例外を処理し、適切なJSONレスポンスを返す
+    
+    Args:
+        e: 発生した例外
+        error_type: エラーの種類を示す文字列
+        user_message: ユーザーに表示するメッセージ（Noneの場合は汎用メッセージ）
+        status_code: HTTPステータスコード
+    
+    Returns:
+        JSONレスポンスとステータスコード
+    """
+    # スタックトレースを取得
+    stack_trace = traceback.format_exc()
+    
+    # エラーをログに記録
+    logger.error(f"{error_type}: {str(e)}\n{stack_trace}")
+    
+    # ユーザー向けメッセージを設定
+    if user_message is None:
+        if status_code == 401:
+            user_message = "認証が必要です。再度ログインしてください。"
+        elif status_code == 403:
+            user_message = "この操作を実行する権限がありません。"
+        elif status_code == 404:
+            user_message = "リクエストされたリソースが見つかりません。"
+        elif status_code >= 500:
+            user_message = "サーバーエラーが発生しました。しばらく経ってからもう一度お試しください。"
+        else:
+            user_message = "エラーが発生しました。"
+    
+    # JSONレスポンスを返す
+    return jsonify({
+        'status': 'error',
+        'error_type': error_type,
+        'message': user_message,
+        'detail': str(e) if not app.config.get('PRODUCTION', False) else None
+    }), status_code
 
 # 環境変数の読み込み
 load_dotenv()
@@ -63,20 +117,52 @@ def load_user(user_id):
 def auth_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # 認証状態のチェック
         if not current_user.is_authenticated or 'access_token' not in session:
+            logger.warning("認証されていないアクセス: ユーザーが認証されていないか、アクセストークンがありません")
+            
+            # APIリクエストの場合はJSONレスポンスを返す
+            if request.is_json or request.path.startswith('/api/') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return handle_error(
+                    Exception("認証が必要です"),
+                    error_type="認証エラー",
+                    user_message="この操作を実行するにはログインが必要です",
+                    status_code=401
+                )
+            
+            # 通常のリクエストの場合はリダイレクト
             logout_user()
             session.clear()
+            flash("セッションが無効になりました。再度ログインしてください。", "warning")
             return redirect(url_for('login'))
+        
+        # アクセストークンの検証
         try:
             # セッションのアクセストークンを検証
             user_data = supabase.auth.get_user(session['access_token'])
             if not user_data:
-                raise Exception("Invalid session")
-        except Exception:
+                raise Exception("無効なセッションです")
+        except Exception as e:
+            logger.warning(f"セッション検証エラー: {str(e)}")
+            
+            # APIリクエストの場合はJSONレスポンスを返す
+            if request.is_json or request.path.startswith('/api/') or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return handle_error(
+                    e,
+                    error_type="セッションエラー",
+                    user_message="セッションが無効になりました。再度ログインしてください",
+                    status_code=401
+                )
+            
+            # 通常のリクエストの場合はリダイレクト
             logout_user()
             session.clear()
+            flash("セッションが無効になりました。再度ログインしてください。", "warning")
             return redirect(url_for('login'))
+        
+        # 認証が成功した場合は元の関数を実行
         return f(*args, **kwargs)
+    
     return decorated_function
 
 # 一括応募機能の初期化
@@ -273,53 +359,89 @@ def update_check():
 @auth_required
 def update_settings():
     try:
+        # JSONデータの解析
         try:
             data = request.get_json(silent=True)
             if data is None:
-                return jsonify({
-                    'status': 'error',
-                    'message': 'リクエストボディが無効です。JSONデータを送信してください。'
-                }), 400
+                return handle_error(
+                    Exception("JSONデータが見つかりません"),
+                    error_type="リクエストエラー",
+                    user_message="リクエストボディが無効です。JSONデータを送信してください。",
+                    status_code=400
+                )
         except Exception as e:
-            return jsonify({
-                'status': 'error',
-                'message': f'リクエストの解析に失敗しました: {str(e)}'
-            }), 400
+            return handle_error(
+                e,
+                error_type="リクエストエラー",
+                user_message="リクエストの解析に失敗しました。正しいJSON形式で送信してください。",
+                status_code=400
+            )
             
-        settings = load_settings()
+        # 設定の読み込み
+        try:
+            settings = load_settings()
+        except Exception as e:
+            return handle_error(
+                e,
+                error_type="設定読み込みエラー",
+                user_message="設定の読み込みに失敗しました。",
+                status_code=500
+            )
         
         # 更新する設定項目を処理
-        if 'model' in data:
-            settings['model'] = data['model']
-        if 'max_items' in data:
-            settings['max_items'] = int(data['max_items'])
-        if 'api_key' in data:
-            settings['api_key'] = data['api_key']
-        if 'deepseek_api_key' in data:
-            settings['deepseek_api_key'] = data['deepseek_api_key']
-        if 'filter_prompt' in data:
-            settings['filter_prompt'] = data['filter_prompt']
+        try:
+            if 'model' in data:
+                settings['model'] = data['model']
+            if 'max_items' in data:
+                settings['max_items'] = int(data['max_items'])
+            if 'api_key' in data:
+                settings['api_key'] = data['api_key']
+            if 'deepseek_api_key' in data:
+                settings['deepseek_api_key'] = data['deepseek_api_key']
+            if 'filter_prompt' in data:
+                settings['filter_prompt'] = data['filter_prompt']
+            
+            # サービス認証情報の更新
+            if 'crowdworks_email' in data:
+                settings['crowdworks_email'] = data['crowdworks_email']
+            if 'crowdworks_password' in data:
+                settings['crowdworks_password'] = data['crowdworks_password']
+            if 'coconala_email' in data:
+                settings['coconala_email'] = data['coconala_email']
+            if 'coconala_password' in data:
+                settings['coconala_password'] = data['coconala_password']
+        except ValueError as e:
+            return handle_error(
+                e,
+                error_type="値エラー",
+                user_message="設定値の形式が正しくありません。",
+                status_code=400
+            )
         
-        # サービス認証情報の更新
-        if 'crowdworks_email' in data:
-            settings['crowdworks_email'] = data['crowdworks_email']
-        if 'crowdworks_password' in data:
-            settings['crowdworks_password'] = data['crowdworks_password']
-        if 'coconala_email' in data:
-            settings['coconala_email'] = data['coconala_email']
-        if 'coconala_password' in data:
-            settings['coconala_password'] = data['coconala_password']
-        
-        save_settings(settings)
+        # 設定の保存
+        try:
+            save_settings(settings)
+        except Exception as e:
+            return handle_error(
+                e,
+                error_type="設定保存エラー",
+                user_message="設定の保存に失敗しました。",
+                status_code=500
+            )
+            
+        # 成功レスポンス
+        logger.info("設定が正常に更新されました")
         return jsonify({
             'status': 'success',
             'message': '設定を更新しました'
         })
     except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
+        return handle_error(
+            e,
+            error_type="設定更新エラー",
+            user_message="設定の更新中に予期しないエラーが発生しました。",
+            status_code=500
+        )
 
 @app.route('/fetch_new_data', methods=['POST'])
 @auth_required
@@ -328,50 +450,126 @@ def fetch_new_data():
         # リクエストボディを取得（空でも問題ない）
         try:
             data = request.get_json(silent=True) or {}
-        except:
+        except Exception as e:
+            logger.warning(f"リクエストの解析に失敗: {str(e)}")
             data = {}
             
         # クローラーのパスを取得
-        crawler_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'crawler.py')
+        try:
+            crawler_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'crawler.py')
+            if not os.path.exists(crawler_path):
+                return handle_error(
+                    Exception(f"クローラーファイルが見つかりません: {crawler_path}"),
+                    error_type="ファイルエラー",
+                    user_message="クローラーファイルが見つかりません。",
+                    status_code=500
+                )
+        except Exception as e:
+            return handle_error(
+                e,
+                error_type="パスエラー",
+                user_message="クローラーファイルのパス取得に失敗しました。",
+                status_code=500
+            )
         
         # Pythonインタープリタのパスを取得
         python_executable = sys.executable
         
         # サブプロセスとしてクローラーを実行
-        process = subprocess.Popen(
-            [python_executable, crawler_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
+        try:
+            process = subprocess.Popen(
+                [python_executable, crawler_path],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
+            # 実行結果を取得
+            stdout, stderr = process.communicate()
+            
+            if process.returncode != 0:
+                logger.error(f"クローラーの実行に失敗: {stderr}")
+                return handle_error(
+                    Exception(f"クローラーの実行に失敗しました"),
+                    error_type="クローラーエラー",
+                    user_message="データの取得に失敗しました。詳細はログを確認してください。",
+                    status_code=500
+                )
+        except subprocess.SubprocessError as e:
+            return handle_error(
+                e,
+                error_type="プロセスエラー",
+                user_message="クローラープロセスの実行に失敗しました。",
+                status_code=500
+            )
         
-        # 実行結果を取得
-        stdout, stderr = process.communicate()
-        
-        if process.returncode == 0:
-            # 最新のデータを読み込む
+        # 最新のデータを読み込む
+        try:
             jobs = get_latest_filtered_json()
+            logger.info(f"新規データの取得が完了: {len(jobs)}件の案件を取得")
             return jsonify({
                 'status': 'success',
                 'message': '新規データの取得が完了しました',
                 'jobs': jobs
             })
-        else:
-            raise Exception(f"クローラーの実行に失敗しました: {stderr}")
+        except Exception as e:
+            return handle_error(
+                e,
+                error_type="データ読み込みエラー",
+                user_message="新規データの読み込みに失敗しました。",
+                status_code=500
+            )
             
     except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
+        return handle_error(
+            e,
+            error_type="データ取得エラー",
+            user_message="データの取得中に予期しないエラーが発生しました。",
+            status_code=500
+        )
 
 @app.route('/check_auth', methods=['POST'])
 @auth_required
 def check_auth():
     try:
-        data = request.get_json()
+        # リクエストデータの取得
+        try:
+            data = request.get_json()
+            if not data:
+                return handle_error(
+                    Exception("リクエストデータが空です"),
+                    error_type="リクエストエラー",
+                    user_message="リクエストデータが空です。サービス名を指定してください。",
+                    status_code=400
+                )
+        except Exception as e:
+            return handle_error(
+                e,
+                error_type="リクエストエラー",
+                user_message="リクエストの解析に失敗しました。正しいJSON形式で送信してください。",
+                status_code=400
+            )
+        
+        # サービス名の取得
         service = data.get('service')
-        settings = load_settings()
+        if not service:
+            return handle_error(
+                Exception("サービス名が指定されていません"),
+                error_type="パラメータエラー",
+                user_message="サービス名を指定してください。",
+                status_code=400
+            )
+        
+        # 設定の読み込み
+        try:
+            settings = load_settings()
+        except Exception as e:
+            return handle_error(
+                e,
+                error_type="設定読み込みエラー",
+                user_message="設定の読み込みに失敗しました。",
+                status_code=500
+            )
         
         # サービスごとの認証情報をチェック
         if service == 'crowdworks':
@@ -379,57 +577,108 @@ def check_auth():
         elif service == 'coconala':
             authenticated = bool(settings.get('coconala_email')) and bool(settings.get('coconala_password'))
         else:
-            authenticated = False
+            return handle_error(
+                Exception(f"不明なサービス: {service}"),
+                error_type="パラメータエラー",
+                user_message=f"不明なサービスです: {service}",
+                status_code=400
+            )
         
+        # 結果を返す
+        logger.info(f"認証情報チェック: サービス={service}, 認証状態={authenticated}")
         return jsonify({
             'status': 'success',
             'authenticated': authenticated
         })
     except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e),
-            'authenticated': False
-        }), 500
+        return handle_error(
+            e,
+            error_type="認証チェックエラー",
+            user_message="認証情報の確認中に予期しないエラーが発生しました。",
+            status_code=500
+        )
 
 @app.route('/fetch_status')
 @auth_required
 def fetch_status():
     try:
-        # クローラーのログファイルを読み取り
-        log_files = glob.glob('logs/crawler_*.log')
-        if not log_files:
-            log_files = ['logs/crawler.log']
+        # クローラーのログファイルを検索
+        try:
+            log_files = glob.glob('logs/crawler_*.log')
+            if not log_files:
+                log_files = ['logs/crawler.log']
+                
+            # ログファイルが存在するか確認
+            if not os.path.exists(log_files[0]):
+                logger.warning(f"ログファイルが見つかりません: {log_files[0]}")
+                return jsonify({
+                    'status': 'unknown',
+                    'message': 'ログファイルが見つかりません'
+                })
+        except Exception as e:
+            return handle_error(
+                e,
+                error_type="ログファイル検索エラー",
+                user_message="ログファイルの検索に失敗しました。",
+                status_code=500
+            )
         
-        latest_log = max(log_files, key=os.path.getctime)
+        # 最新のログファイルを取得
+        try:
+            latest_log = max(log_files, key=os.path.getctime)
+        except Exception as e:
+            return handle_error(
+                e,
+                error_type="ログファイル選択エラー",
+                user_message="最新のログファイルの選択に失敗しました。",
+                status_code=500
+            )
         
-        with open(latest_log, 'r', encoding='utf-8') as f:
-            # 最後の10行を読み取り
-            lines = f.readlines()[-10:]
+        # ログファイルを読み取り
+        try:
+            with open(latest_log, 'r', encoding='utf-8') as f:
+                # 最後の10行を読み取り
+                lines = f.readlines()[-10:]
+        except FileNotFoundError:
+            logger.warning(f"ログファイルが見つかりません: {latest_log}")
+            return jsonify({
+                'status': 'unknown',
+                'message': 'ログファイルが見つかりません'
+            })
+        except Exception as e:
+            return handle_error(
+                e,
+                error_type="ログファイル読み取りエラー",
+                user_message="ログファイルの読み取りに失敗しました。",
+                status_code=500
+            )
             
-            # ログから進捗状況を解析
-            for line in reversed(lines):
-                if '案件を取得' in line:
-                    return jsonify({
-                        'status': 'running',
-                        'message': f'案件情報を取得中...'
-                    })
-                elif 'GPTフィルタリング' in line:
-                    return jsonify({
-                        'status': 'running',
-                        'message': 'GPTによるフィルタリング中...'
-                    })
+        # ログから進捗状況を解析
+        for line in reversed(lines):
+            if '案件を取得' in line:
+                return jsonify({
+                    'status': 'running',
+                    'message': f'案件情報を取得中...'
+                })
+            elif 'GPTフィルタリング' in line:
+                return jsonify({
+                    'status': 'running',
+                    'message': 'GPTによるフィルタリング中...'
+                })
         
+        # 進捗状況が不明な場合
         return jsonify({
             'status': 'unknown',
             'message': '処理中...'
         })
         
     except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': str(e)
-        }), 500
+        return handle_error(
+            e,
+            error_type="ステータス取得エラー",
+            user_message="処理状況の取得中に予期しないエラーが発生しました。",
+            status_code=500
+        )
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3000, debug=True)

@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 from typing import Dict, List
 import time
+import traceback
 from queue import Queue
 from threading import Thread
 
@@ -14,8 +15,56 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
 from openai import OpenAI
+
+# ロガーの設定
+logger.remove()  # デフォルトのハンドラを削除
+logger.add("logs/bulk_apply.log", rotation="10 MB", level="INFO")
+logger.add(lambda msg: print(msg), level="INFO", format="{time} - {level} - {message}")
+
+# エラーハンドリングのためのユーティリティ関数
+def handle_error(e, error_type="一般エラー", user_message=None, status_code=500):
+    """
+    例外を処理し、適切なJSONレスポンスを返す
+    
+    Args:
+        e: 発生した例外
+        error_type: エラーの種類を示す文字列
+        user_message: ユーザーに表示するメッセージ（Noneの場合は汎用メッセージ）
+        status_code: HTTPステータスコード
+    
+    Returns:
+        JSONレスポンスとステータスコード
+    """
+    # スタックトレースを取得
+    stack_trace = traceback.format_exc()
+    
+    # エラーをログに記録
+    logger.error(f"{error_type}: {str(e)}\n{stack_trace}")
+    
+    # ユーザー向けメッセージを設定
+    if user_message is None:
+        if status_code == 400:
+            user_message = "リクエストが無効です。入力内容を確認してください。"
+        elif status_code == 401:
+            user_message = "認証が必要です。再度ログインしてください。"
+        elif status_code == 403:
+            user_message = "この操作を実行する権限がありません。"
+        elif status_code == 404:
+            user_message = "リクエストされたリソースが見つかりません。"
+        elif status_code >= 500:
+            user_message = "サーバーエラーが発生しました。しばらく経ってからもう一度お試しください。"
+        else:
+            user_message = "エラーが発生しました。"
+    
+    # JSONレスポンスを返す
+    return jsonify({
+        'status': 'error',
+        'error_type': error_type,
+        'message': user_message,
+        'detail': str(e)
+    }), status_code
 
 # グローバル変数で進捗状況を管理
 progress_queue = Queue()
@@ -373,40 +422,112 @@ def register_bulk_apply_routes(app: Flask):
     @app.route('/bulk_apply', methods=['POST'])
     def bulk_apply():
         try:
-            data = request.get_json()
-            urls = data.get('urls', [])
+            # リクエストデータの取得
+            try:
+                data = request.get_json()
+                if not data:
+                    return handle_error(
+                        Exception("リクエストデータが空です"),
+                        error_type="リクエストエラー",
+                        user_message="リクエストデータが空です。応募するURLを指定してください。",
+                        status_code=400
+                    )
+            except Exception as e:
+                return handle_error(
+                    e,
+                    error_type="リクエストエラー",
+                    user_message="リクエストの解析に失敗しました。正しいJSON形式で送信してください。",
+                    status_code=400
+                )
             
+            # URLリストの取得
+            urls = data.get('urls', [])
             if not urls:
-                return jsonify({
-                    'status': 'error',
-                    'message': '応募する案件が選択されていません'
-                }), 400
+                return handle_error(
+                    Exception("応募するURLが指定されていません"),
+                    error_type="パラメータエラー",
+                    user_message="応募する案件が選択されていません。少なくとも1つの案件を選択してください。",
+                    status_code=400
+                )
+            
+            # URLの形式チェック
+            invalid_urls = [url for url in urls if not url.startswith('http')]
+            if invalid_urls:
+                return handle_error(
+                    Exception(f"無効なURL形式: {invalid_urls[:3]}..."),
+                    error_type="パラメータエラー",
+                    user_message="無効なURL形式が含まれています。すべてのURLが正しい形式であることを確認してください。",
+                    status_code=400
+                )
             
             # 別スレッドで処理を開始
-            Thread(target=bulk_apply_process, args=(urls,), daemon=True).start()
+            try:
+                Thread(target=bulk_apply_process, args=(urls,), daemon=True).start()
+                logger.info(f"一括応募プロセスを開始: {len(urls)}件の案件")
+            except Exception as e:
+                return handle_error(
+                    e,
+                    error_type="スレッド起動エラー",
+                    user_message="一括応募プロセスの起動に失敗しました。",
+                    status_code=500
+                )
             
+            # 成功レスポンス
             return jsonify({
                 'status': 'success',
-                'message': '一括応募を開始しました'
+                'message': '一括応募を開始しました',
+                'count': len(urls)
             })
             
         except Exception as e:
-            logger.error(f"一括応募の開始に失敗: {str(e)}")
-            return jsonify({
-                'status': 'error',
-                'message': str(e)
-            }), 500
+            return handle_error(
+                e,
+                error_type="一括応募エラー",
+                user_message="一括応募の開始中に予期しないエラーが発生しました。",
+                status_code=500
+            )
     
     @app.route('/bulk_apply_progress')
     def bulk_apply_progress():
         def generate():
-            while True:
-                progress = progress_queue.get()
-                yield f"data: {json.dumps(progress)}\n\n"
-                if progress["completed"]:
-                    break
+            try:
+                while True:
+                    try:
+                        # キューからデータを取得（タイムアウト付き）
+                        progress = progress_queue.get(timeout=60)
+                        yield f"data: {json.dumps(progress)}\n\n"
+                        if progress["completed"]:
+                            break
+                    except Queue.Empty:
+                        # タイムアウトした場合はエラーメッセージを送信
+                        error_data = {
+                            "status": "error",
+                            "message": "データ取得がタイムアウトしました",
+                            "completed": True
+                        }
+                        yield f"data: {json.dumps(error_data)}\n\n"
+                        logger.error("進捗データの取得がタイムアウトしました")
+                        break
+            except Exception as e:
+                # 例外が発生した場合はエラーメッセージを送信
+                error_data = {
+                    "status": "error",
+                    "message": f"エラーが発生しました: {str(e)}",
+                    "completed": True
+                }
+                yield f"data: {json.dumps(error_data)}\n\n"
+                logger.error(f"進捗データの生成中にエラーが発生: {str(e)}")
         
-        return Response(
-            stream_with_context(generate()),
-            mimetype='text/event-stream'
-        )
+        try:
+            return Response(
+                stream_with_context(generate()),
+                mimetype='text/event-stream'
+            )
+        except Exception as e:
+            logger.error(f"SSEレスポンスの作成に失敗: {str(e)}")
+            return handle_error(
+                e,
+                error_type="ストリーミングエラー",
+                user_message="進捗状況のストリーミングに失敗しました。",
+                status_code=500
+            )

@@ -1,0 +1,187 @@
+2025-03-17 15:32:27,054 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:32:27,060 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:32:43,437 - werkzeug - INFO -  * Detected change in '/Users/m1_mini/Git/Selenium/app.py', reloading
+2025-03-17 15:32:44,292 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:32:44,308 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:33:02,490 - werkzeug - INFO -  * Detected change in '/Users/m1_mini/Git/Selenium/app.py', reloading
+2025-03-17 15:33:03,259 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:33:03,267 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:33:21,449 - werkzeug - INFO -  * Detected change in '/Users/m1_mini/Git/Selenium/app.py', reloading
+2025-03-17 15:33:22,166 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:33:22,175 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:33:39,333 - werkzeug - INFO -  * Detected change in '/Users/m1_mini/Git/Selenium/app.py', reloading
+2025-03-17 15:33:40,060 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:33:40,066 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:33:58,250 - werkzeug - INFO -  * Detected change in '/Users/m1_mini/Git/Selenium/app.py', reloading
+2025-03-17 15:33:58,914 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:33:58,919 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:34:18,125 - werkzeug - INFO -  * Detected change in '/Users/m1_mini/Git/Selenium/bulk_apply.py', reloading
+2025-03-17 15:34:18,891 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:34:18,903 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:34:35,145 - werkzeug - INFO -  * Detected change in '/Users/m1_mini/Git/Selenium/bulk_apply.py', reloading
+2025-03-17 15:34:35,944 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:34:35,951 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:34:50,088 - werkzeug - INFO -  * Detected change in '/Users/m1_mini/Git/Selenium/bulk_apply.py', reloading
+2025-03-17 15:34:50,895 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:34:50,902 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:35:35,351 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.50.18:3000
+2025-03-17 15:35:35,351 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-03-17 15:35:35,352 - werkzeug - INFO -  * Restarting with stat
+2025-03-17 15:35:35,811 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:35:35,821 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:36:08,898 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:36:08,969 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:36:09,000 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:36:09] "GET / HTTP/1.1" 200 -
+2025-03-17 15:36:12,608 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:36:12,664 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:36:12,669 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:36:12] "GET / HTTP/1.1" 200 -
+2025-03-17 15:36:15,146 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:36:15,188 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:36:15,194 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:36:15] "GET / HTTP/1.1" 200 -
+2025-03-17 15:36:18,616 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:36:18,655 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:36:18,658 - __main__ - INFO - 設定が正常に更新されました
+2025-03-17 15:36:18,661 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:36:18] "POST /update_settings HTTP/1.1" 200 -
+2025-03-17 15:36:26,576 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:36:26,634 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:36:26,639 - __main__ - INFO - 設定が正常に更新されました
+2025-03-17 15:36:26,643 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:36:26] "POST /update_settings HTTP/1.1" 200 -
+2025-03-17 15:36:55,770 - flask_wtf.csrf - INFO - The CSRF token is missing.
+2025-03-17 15:36:55,771 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:36:55] "[31m[1mPOST /check_auth HTTP/1.1[0m" 400 -
+2025-03-17 15:36:57,474 - flask_wtf.csrf - INFO - The CSRF token is missing.
+2025-03-17 15:36:57,474 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:36:57] "[31m[1mPOST /check_auth HTTP/1.1[0m" 400 -
+2025-03-17 15:36:59,696 - flask_wtf.csrf - INFO - The CSRF token is missing.
+2025-03-17 15:36:59,696 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:36:59] "[31m[1mPOST /check_auth HTTP/1.1[0m" 400 -
+2025-03-17 15:45:08,319 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.50.18:3000
+2025-03-17 15:45:08,320 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-03-17 15:45:08,320 - werkzeug - INFO -  * Restarting with stat
+2025-03-17 15:45:08,828 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:45:08,864 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:45:11,098 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:11,159 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:11,178 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:45:11] "GET / HTTP/1.1" 200 -
+2025-03-17 15:45:16,430 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:16,489 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:16,504 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:45:16] "GET / HTTP/1.1" 200 -
+2025-03-17 15:45:20,682 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:20,748 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:20,751 - __main__ - INFO - 設定が正常に更新されました
+2025-03-17 15:45:20,751 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:45:20] "POST /update_settings HTTP/1.1" 200 -
+2025-03-17 15:45:26,056 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:26,117 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:26,121 - __main__ - INFO - 設定が正常に更新されました
+2025-03-17 15:45:26,122 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:45:26] "POST /update_settings HTTP/1.1" 200 -
+2025-03-17 15:45:37,154 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:37,189 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:37,193 - __main__ - INFO - 認証情報チェック: サービス=crowdworks, 認証状態=True
+2025-03-17 15:45:37,194 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:45:37] "POST /check_auth HTTP/1.1" 200 -
+2025-03-17 15:45:38,908 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:38,958 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:38,959 - __main__ - INFO - 認証情報チェック: サービス=crowdworks, 認証状態=True
+2025-03-17 15:45:38,959 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:45:38] "POST /check_auth HTTP/1.1" 200 -
+2025-03-17 15:45:39,708 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:39,772 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:39,773 - __main__ - INFO - 認証情報チェック: サービス=coconala, 認証状態=False
+2025-03-17 15:45:39,773 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:45:39] "POST /check_auth HTTP/1.1" 200 -
+2025-03-17 15:45:45,328 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:45,396 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:45:45,397 - __main__ - INFO - 認証情報チェック: サービス=crowdworks, 認証状態=True
+2025-03-17 15:45:45,397 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:45:45] "POST /check_auth HTTP/1.1" 200 -
+2025-03-17 15:46:32,005 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:46:32,070 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:46:32,071 - __main__ - INFO - 認証情報チェック: サービス=crowdworks, 認証状態=True
+2025-03-17 15:46:32,072 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:46:32] "POST /check_auth HTTP/1.1" 200 -
+2025-03-17 15:48:00,946 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:48:01,000 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:48:01,003 - __main__ - INFO - 認証情報チェック: サービス=coconala, 認証状態=False
+2025-03-17 15:48:01,004 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:48:01] "POST /check_auth HTTP/1.1" 200 -
+2025-03-17 15:48:04,818 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:48:04,870 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:48:04,871 - __main__ - INFO - 認証情報チェック: サービス=crowdworks, 認証状態=True
+2025-03-17 15:48:04,872 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:48:04] "POST /check_auth HTTP/1.1" 200 -
+2025-03-17 15:48:32,887 - werkzeug - INFO -  * Detected change in '/Users/m1_mini/Git/Selenium/app.py', reloading
+2025-03-17 15:48:33,038 - werkzeug - INFO -  * Restarting with stat
+2025-03-17 15:48:33,767 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:48:33,775 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:50:12,384 - werkzeug - INFO -  * Detected change in '/Users/m1_mini/Git/Selenium/app.py', reloading
+2025-03-17 15:50:12,576 - werkzeug - INFO -  * Restarting with stat
+2025-03-17 15:50:13,362 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:50:13,372 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:54:20,620 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.50.18:3000
+2025-03-17 15:54:20,620 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-03-17 15:54:20,621 - werkzeug - INFO -  * Restarting with stat
+2025-03-17 15:54:21,150 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 15:54:21,156 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 15:54:24,065 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:24,118 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:24,140 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:54:24] "GET / HTTP/1.1" 200 -
+2025-03-17 15:54:26,124 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:26,175 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:26,178 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:54:26] "GET / HTTP/1.1" 200 -
+2025-03-17 15:54:29,620 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:29,692 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:29,694 - __main__ - INFO - 設定が正常に更新されました
+2025-03-17 15:54:29,695 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:54:29] "POST /update_settings HTTP/1.1" 200 -
+2025-03-17 15:54:30,695 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:30,747 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:30,748 - __main__ - INFO - 認証情報チェック: サービス=crowdworks, 認証状態=True
+2025-03-17 15:54:30,748 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:54:30] "POST /check_auth HTTP/1.1" 200 -
+2025-03-17 15:54:30,792 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:30,844 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:30,846 - __main__ - INFO - ジョブデータ取得: サービス=crowdworks, 件数=0
+2025-03-17 15:54:30,846 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:54:30] "POST /get_service_jobs HTTP/1.1" 200 -
+2025-03-17 15:54:32,102 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:32,136 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:32,138 - __main__ - INFO - 認証情報チェック: サービス=crowdworks, 認証状態=True
+2025-03-17 15:54:32,138 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:54:32] "POST /check_auth HTTP/1.1" 200 -
+2025-03-17 15:54:32,207 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:32,243 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:32,244 - __main__ - INFO - ジョブデータ取得: サービス=crowdworks, 件数=0
+2025-03-17 15:54:32,245 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:54:32] "POST /get_service_jobs HTTP/1.1" 200 -
+2025-03-17 15:54:32,949 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:32,984 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:32,985 - __main__ - INFO - 認証情報チェック: サービス=crowdworks, 認証状態=True
+2025-03-17 15:54:32,985 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:54:32] "POST /check_auth HTTP/1.1" 200 -
+2025-03-17 15:54:33,049 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:33,084 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:33,088 - __main__ - INFO - ジョブデータ取得: サービス=crowdworks, 件数=0
+2025-03-17 15:54:33,089 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:54:33] "POST /get_service_jobs HTTP/1.1" 200 -
+2025-03-17 15:54:33,544 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:33,574 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:33,575 - __main__ - INFO - 認証情報チェック: サービス=crowdworks, 認証状態=True
+2025-03-17 15:54:33,575 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:54:33] "POST /check_auth HTTP/1.1" 200 -
+2025-03-17 15:54:33,636 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:33,686 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 15:54:33,686 - __main__ - INFO - ジョブデータ取得: サービス=crowdworks, 件数=0
+2025-03-17 15:54:33,686 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 15:54:33] "POST /get_service_jobs HTTP/1.1" 200 -
+2025-03-17 16:08:16,373 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.50.18:3000
+2025-03-17 16:08:16,375 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-03-17 16:08:16,378 - werkzeug - INFO -  * Restarting with stat
+2025-03-17 16:08:16,911 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 16:08:16,924 - werkzeug - INFO -  * Debugger PIN: 138-789-052
+2025-03-17 16:08:19,244 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 16:08:19,297 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 16:08:19,327 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 16:08:19] "GET / HTTP/1.1" 200 -
+2025-03-17 16:08:22,681 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 16:08:22,734 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 16:08:22,738 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 16:08:22] "GET / HTTP/1.1" 200 -
+2025-03-17 16:08:24,139 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 16:08:24,172 - httpx - INFO - HTTP Request: GET https://puytukanfunvugjwrvhr.supabase.co/auth/v1/user "HTTP/1.1 200 OK"
+2025-03-17 16:08:24,173 - __main__ - INFO - 認証情報チェック: サービス=crowdworks, 認証状態=True
+2025-03-17 16:08:24,174 - werkzeug - INFO - 127.0.0.1 - - [17/Mar/2025 16:08:24] "POST /check_auth HTTP/1.1" 200 -
+2025-03-17 16:08:34,279 - werkzeug - INFO -  * Detected change in '/Users/m1_mini/Git/Selenium/app.py', reloading
+2025-03-17 16:08:34,497 - werkzeug - INFO -  * Restarting with stat
+2025-03-17 16:08:35,236 - werkzeug - WARNING -  * Debugger is active!
+2025-03-17 16:08:35,245 - werkzeug - INFO -  * Debugger PIN: 138-789-052

@@ -1019,25 +1019,112 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         // トースト表示
-        const filterToast = document.querySelector('.filter-settings-toast');
-        filterToast.style.display = 'block';
-        setTimeout(() => {
-            filterToast.classList.add('show');
-        }, 10);
+        let filterToast = document.querySelector('.filter-settings-toast');
         
-        // フィルター設定の初期状態を設定
-        const filterPrompt = document.getElementById('filter-prompt');
-        originalFilterPrompt = filterPrompt.value;
+        // トースト要素が存在しない場合は再作成
+        if (!filterToast) {
+            console.log('フィルター設定トースト要素を再作成します');
+            
+            // コンテナ要素を取得
+            const container = document.querySelector('#content .container-fluid');
+            if (container) {
+                // 新しいトースト要素を作成
+                filterToast = document.createElement('div');
+                filterToast.className = 'toast-notification filter-settings-toast';
+                filterToast.style.display = 'none';
+                
+                // 内部要素を作成
+                filterToast.innerHTML = `
+                    <div class="filter-settings">
+                        <h5>フィルター設定</h5>
+                        <div class="form-group mt-3">
+                            <p class="text-muted small">案件をフィルタリングするための条件を入力してください。</p>
+                            <textarea class="form-control" id="filter-prompt"
+                                    placeholder="例: 予算が10,000円以上で、Pythonに関連する案件のみ選択">${originalFilterPrompt || ''}</textarea>
+                        </div>
+                        <div class="d-flex justify-content-end mt-4">
+                            <button class="btn btn-secondary mr-4" id="close-filter" style="min-width: 150px; font-size: 1.3rem; padding: 10px 20px;">閉じる</button>
+                            <button class="btn btn-primary" id="save-filter" style="min-width: 150px; font-size: 1.3rem; padding: 10px 20px;">保存</button>
+                        </div>
+                    </div>
+                `;
+                
+                // コンテナに追加
+                container.appendChild(filterToast);
+                
+                // イベントリスナーを再設定
+                document.getElementById('close-filter').addEventListener('click', closeFilterToast);
+                document.getElementById('save-filter').addEventListener('click', saveFilterSettings);
+                
+                // フィルター設定の入力変更を監視
+                setupFilterPromptListener();
+            }
+        }
+        
+        if (filterToast) {
+            // 既存のトーストを表示
+            filterToast.style.display = 'block';
+            setTimeout(() => {
+                filterToast.classList.add('show');
+            }, 10);
+            
+            // フィルター設定の初期状態を設定
+            const filterPrompt = document.getElementById('filter-prompt');
+            if (filterPrompt) {
+                originalFilterPrompt = filterPrompt.value;
+            }
+        } else {
+            console.error('フィルター設定トースト要素が見つかりません');
+            showToast('フィルター設定を表示できません', 'error');
+        }
     });
 
-    // フィルター設定を閉じる
-    document.getElementById('close-filter').addEventListener('click', function() {
+    // フィルター設定を閉じる関数
+    function closeFilterToast() {
         const filterToast = document.querySelector('.filter-settings-toast');
-        filterToast.classList.remove('show');
-        setTimeout(() => {
-            filterToast.style.display = 'none';
-        }, 300);
-    });
+        if (filterToast) {
+            filterToast.classList.remove('show');
+            setTimeout(() => {
+                filterToast.style.display = 'none';
+            }, 300);
+        } else {
+            console.error('フィルター設定トースト要素が見つかりません');
+        }
+    }
+
+    // フィルター設定を保存する関数
+    function saveFilterSettings() {
+        const filterPrompt = document.getElementById('filter-prompt');
+        if (filterPrompt) {
+            updateSettings({ filter_prompt: filterPrompt.value });
+            
+            // 保存後にトーストを閉じる
+            const filterToast = document.querySelector('.filter-settings-toast');
+            if (filterToast) {
+                filterToast.classList.remove('show');
+                setTimeout(() => {
+                    filterToast.style.display = 'none';
+                    // 完了通知を表示
+                    showToast('フィルター設定を保存しました', 'success');
+                }, 300);
+                
+                // 値を保存
+                originalFilterPrompt = filterPrompt.value;
+            } else {
+                console.error('フィルター設定トースト要素が見つかりません');
+                showToast('フィルター設定を保存しました', 'success');
+            }
+        } else {
+            console.error('フィルター設定入力要素が見つかりません');
+            showToast('フィルター設定の保存に失敗しました', 'error');
+        }
+    }
+
+    // フィルター設定を閉じるボタンのイベントリスナー
+    document.getElementById('close-filter')?.addEventListener('click', closeFilterToast);
+
+    // フィルター設定を保存するボタンのイベントリスナー
+    document.getElementById('save-filter')?.addEventListener('click', saveFilterSettings);
 
     // サービスリンクのクリック処理
     const serviceLinks = document.querySelectorAll('.service-link');
@@ -1058,10 +1145,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify({ service: service })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('認証情報の確認に失敗しました');
+                }
+                return response.json();
+            })
             .then(data => {
                 if (!data.authenticated) {
                     // 認証情報がない場合はモーダルを表示
@@ -1076,6 +1169,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const views = document.querySelectorAll('.view-container');
                 views.forEach(view => view.classList.remove('active'));
                 document.getElementById('jobs-view').classList.add('active');
+            })
+            .catch(error => {
+                console.error('エラー:', error);
+                showAlert('danger', `サービス情報の取得に失敗しました: ${error.message}`);
             });
         });
     });
@@ -1100,39 +1197,32 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // フィルター設定の変更監視
-    let originalFilterPrompt = document.getElementById('filter-prompt').value;
+    let originalFilterPrompt = document.getElementById('filter-prompt') ? document.getElementById('filter-prompt').value : '';
     
-    document.getElementById('filter-prompt').addEventListener('input', function() {
-        const currentValue = this.value;
-        const saveFilterBtn = document.getElementById('save-filter');
-        const hasChanged = currentValue !== originalFilterPrompt;
-        
-        if (hasChanged) {
-            saveFilterBtn.classList.add('btn-primary');
-            saveFilterBtn.classList.remove('btn-secondary');
-        } else {
-            saveFilterBtn.classList.remove('btn-primary');
-            saveFilterBtn.classList.add('btn-secondary');
+    // フィルター設定の入力変更を監視する関数
+    function setupFilterPromptListener() {
+        const filterPrompt = document.getElementById('filter-prompt');
+        if (filterPrompt) {
+            filterPrompt.addEventListener('input', function() {
+                const currentValue = this.value;
+                const saveFilterBtn = document.getElementById('save-filter');
+                if (saveFilterBtn) {
+                    const hasChanged = currentValue !== originalFilterPrompt;
+                    
+                    if (hasChanged) {
+                        saveFilterBtn.classList.add('btn-primary');
+                        saveFilterBtn.classList.remove('btn-secondary');
+                    } else {
+                        saveFilterBtn.classList.remove('btn-primary');
+                        saveFilterBtn.classList.add('btn-secondary');
+                    }
+                }
+            });
         }
-    });
-
-    // フィルター設定の保存
-    document.getElementById('save-filter').addEventListener('click', function() {
-        const filterPrompt = document.getElementById('filter-prompt').value;
-        updateSettings({ filter_prompt: filterPrompt });
-        
-        // 保存後にトーストを閉じる
-        const filterToast = document.querySelector('.filter-settings-toast');
-        filterToast.classList.remove('show');
-        setTimeout(() => {
-            filterToast.style.display = 'none';
-            // 完了通知を表示
-            showToast('フィルター設定を保存しました', 'success');
-        }, 300);
-        
-        // 値を保存
-        originalFilterPrompt = filterPrompt;
-    });
+    }
+    
+    // 初期設定
+    setupFilterPromptListener();
 
     // 設定を更新する関数
     function updateSettings(settings) {
@@ -1168,12 +1258,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 <span aria-hidden="true">&times;</span>
             </button>
         `;
-        document.querySelector('.container').insertBefore(alertDiv, document.querySelector('.container').firstChild);
         
-        // 3秒後に自動で消える
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 3000);
+        // コンテナ要素の存在確認を追加
+        const container = document.querySelector('.container');
+        if (container) {
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            // 3秒後に自動で消える
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        } else {
+            // コンテナが見つからない場合はbodyに追加
+            document.body.appendChild(alertDiv);
+            
+            // 3秒後に自動で消える
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
     }
     
     // トースト通知表示関数
