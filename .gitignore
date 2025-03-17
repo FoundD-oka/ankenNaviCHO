@@ -1,2 +1,10 @@
 /.cursorrules
 /.env
+/crawled_data/
+/__pycache__/
+/logs/
+/backups/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store

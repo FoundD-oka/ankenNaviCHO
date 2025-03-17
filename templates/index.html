@@ -486,12 +486,14 @@
                     <i class="fa fa-trash"></i> ＞ 全データクリア
                 </a>
             </li>
-            <li>
-                <a href="#" id="check-update-link">
-                    <i class="fa fa-refresh"></i> ＞ 更新を確認
-                </a>
-            </li>
         </ul>
+        
+        <!-- 更新確認リンクをサイドバー最下部に配置 -->
+        <div style="padding: 15px 20px; text-align: center; margin-top: 20px;">
+            <a href="#" id="check-update-link" style="color: #ffffff; font-size: 1.3rem; display: inline-block;">
+                <i class="fa fa-refresh"></i> アプリの更新確認
+            </a>
+        </div>
     </nav>
 
     <!-- Page Content -->
@@ -743,6 +745,18 @@
 {% block scripts %}
 {{super()}}
 <script>
+// CSRFトークンを取得
+const csrfToken = "{{ csrf_token() }}";
+
+// Ajaxリクエスト用のヘッダーを設定
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+            xhr.setRequestHeader("X-CSRFToken", csrfToken);
+        }
+    }
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     // アバターとトーストの要素を取得
     const avatarContainer = document.getElementById('user-avatar-container');
@@ -1477,6 +1491,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({}),
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
                 success: function(response) {
                     if (response.update_available) {
                         // 更新が利用可能
@@ -1519,6 +1536,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({}),
+                headers: {
+                    'X-CSRFToken': csrfToken
+                },
                 success: function(response) {
                     if (response.success) {
                         // 更新成功
@@ -1557,6 +1577,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         $.ajax({
                             url: '/api/update_status',
                             type: 'GET',
+                            headers: {
+                                'X-CSRFToken': csrfToken
+                            },
                             success: function(data) {
                                 // プログレスバーを更新
                                 $('#update-progress-bar').css('width', data.progress + '%').attr('aria-valuenow', data.progress);

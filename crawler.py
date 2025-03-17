@@ -18,10 +18,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from webdriver_manager.chrome import ChromeDriverManager
 from openai import OpenAI
 import re
 import platform
+
+# 自作のChromeDriver管理モジュールをインポート
+import chromedriver_manager
 
 # 環境変数の読み込み
 load_dotenv()
@@ -210,8 +212,8 @@ class CrowdWorksCrawler:
         CrowdWorksクローラーの初期化
         
         Args:
-            email (str): ログイン用メールアドレス
-            password (str): ログインパスワード
+            email: ログイン用メールアドレス
+            password: ログイン用パスワード
         """
         self.base_url = "https://crowdworks.jp"
         self.search_url = f"{self.base_url}/public/jobs/search?order=new"
@@ -245,20 +247,12 @@ class CrowdWorksCrawler:
         chrome_options.add_experimental_option("prefs", prefs)
         
         try:
-            from selenium.webdriver.chrome.service import Service
+            # ChromeDriver自動管理モジュールを使用してドライバーパスを取得
+            driver_path = chromedriver_manager.setup_driver()
             
-            # ChromeDriverのパスを設定
-            # 環境変数から取得するか、デフォルトのパスを使用
-            driver_path = os.getenv('SELENIUM_DRIVER_PATH', './chromedriver')
-            
-            if not os.path.exists(driver_path):
-                logger.error(f"ChromeDriverが見つかりません: {driver_path}")
-                logger.info("https://chromedriver.chromium.org/downloads からM1 Mac用のChrome Driverをダウンロードし、")
-                logger.info("プロジェクトのルートディレクトリに配置してください。")
-                raise FileNotFoundError(f"ChromeDriver not found at {driver_path}")
-            
-            # 実行権限を付与
-            os.chmod(driver_path, 0o755)
+            if not driver_path:
+                logger.error("ChromeDriverの自動設定に失敗しました")
+                raise Exception("ChromeDriverの自動設定に失敗しました")
             
             service = Service(executable_path=driver_path)
             self.driver = webdriver.Chrome(service=service, options=chrome_options)

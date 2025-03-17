@@ -18,6 +18,10 @@ import logging
 import re
 from openai import OpenAI
 from updater import check_for_updates, perform_update, get_update_status
+import atexit
+
+# ChromeDriver自動管理モジュールをインポート
+import chromedriver_manager
 
 # ロガーの設定
 logging.basicConfig(
@@ -76,11 +80,17 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'your-secret-key-here')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 Bootstrap(app)
 csrf = CSRFProtect(app)
 
 # CSRFトークンをAjaxリクエストでも検証するように設定
 csrf.exempt_views = []
+
+# アップデート関連のエンドポイントをCSRF保護から除外（バックアップとして）
+csrf.exempt('/api/check_updates')
+csrf.exempt('/api/perform_update')
+csrf.exempt('/api/update_status')
 
 # Supabaseクライアントの初期化
 supabase: Client = create_client(
@@ -93,6 +103,28 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'このページにアクセスするにはログインが必要です。'
+
+# ChromeDriver自動管理の初期化
+try:
+    # ChromeDriverのセットアップ
+    driver_path = chromedriver_manager.setup_driver()
+    if driver_path:
+        logger.info(f"ChromeDriverを自動設定しました: {driver_path}")
+    else:
+        logger.warning("ChromeDriverの自動設定に失敗しました。手動での設定が必要な場合があります。")
+    
+    # バックグラウンド更新を開始
+    chromedriver_manager.start_background_update()
+    logger.info("ChromeDriverのバックグラウンド更新を開始しました")
+    
+    # アプリケーション終了時にバックグラウンド更新を停止
+    def stop_chromedriver_update():
+        chromedriver_manager.stop_background_update()
+        logger.info("ChromeDriverのバックグラウンド更新を停止しました")
+    
+    atexit.register(stop_chromedriver_update)
+except Exception as e:
+    logger.error(f"ChromeDriver自動管理の初期化に失敗: {str(e)}")
 
 # ユーザーモデル
 class User(UserMixin):
@@ -1193,6 +1225,62 @@ def update_status_api():
         return jsonify(get_update_status())
     except Exception as e:
         return handle_error(e, "ステータス取得エラー", "更新状態の取得中にエラーが発生しました。")
+
+# ChromeDriverの状態を確認するAPIエンドポイントを追加
+@app.route('/api/chromedriver/status', methods=['GET'])
+@auth_required
+def chromedriver_status_api():
+    """ChromeDriverの状態を取得するAPI"""
+    try:
+        # ChromeDriverManagerのインスタンスを取得
+        manager = chromedriver_manager.get_instance()
+        config = manager.config
+        
+        # 状態情報を作成
+        status = {
+            "chrome_version": config.get("chrome_version", "不明"),
+            "driver_version": config.get("driver_version", "不明"),
+            "driver_path": config.get("driver_path", "不明"),
+            "last_check": config.get("last_check", "なし"),
+            "last_update": config.get("last_update", "なし"),
+            "is_update_running": manager.update_thread is not None and manager.update_thread.is_alive()
+        }
+        
+        return jsonify({"status": "success", "data": status})
+    except Exception as e:
+        logger.error(f"ChromeDriverの状態取得に失敗: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# ChromeDriverを手動で更新するAPIエンドポイントを追加
+@app.route('/api/chromedriver/update', methods=['POST'])
+@auth_required
+def chromedriver_update_api():
+    """ChromeDriverを手動で更新するAPI"""
+    try:
+        # ChromeDriverを再セットアップ
+        driver_path = chromedriver_manager.setup_driver()
+        
+        if driver_path:
+            return jsonify({
+                "status": "success", 
+                "message": "ChromeDriverを更新しました", 
+                "driver_path": driver_path
+            })
+        else:
+            return jsonify({
+                "status": "error", 
+                "message": "ChromeDriverの更新に失敗しました"
+            }), 500
+    except Exception as e:
+        logger.error(f"ChromeDriverの手動更新に失敗: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# ChromeDriverエラーページを表示するルート
+@app.route('/chromedriver_error')
+def chromedriver_error():
+    """ChromeDriverエラーページを表示"""
+    error_message = request.args.get('message', 'ChromeDriverの設定に問題が発生しました。')
+    return render_template('error.html', error_message=error_message)
 
 if __name__ == '__main__':
     # 起動時に古いデータを削除
