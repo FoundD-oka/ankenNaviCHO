@@ -414,7 +414,7 @@
     <!-- Sidebar -->
     <nav id="sidebar">
         <div class="sidebar-header">
-            <h3>案件naviCHO</h3>
+            <h3>案件naviCHO <small style="font-size: 0.6em;">v0.4.2</small></h3>
         </div>
 
         <!-- ユーザーアバター -->
@@ -444,7 +444,7 @@
                 <a href="#" class="service-link active" data-service="crowdworks">クラウドワークス ▶︎</a>
             </li>
             <li>
-                <a href="#" class="service-link" data-service="coconala">ココナラ ▶︎</a>
+                <a href="#" class="service-link disabled" data-service="coconala" style="color: #6c757d; cursor: not-allowed; opacity: 0.65;">ココナラ ▶︎</a>
             </li>
         </ul>
         
@@ -474,7 +474,17 @@
         
         <ul class="list-unstyled components">
             <li>
-                <a href="#" class="filter-settings-link">フィルター設定</a>
+                <a href="#" class="filter-settings-link">＞ フィルター設定</a>
+            </li>
+            <li>
+                <a href="{{ url_for('job_history_page') }}">
+                    <i class="fa fa-history"></i> ＞ 案件履歴
+                </a>
+            </li>
+            <li>
+                <a href="#" id="clear-all-data-link" class="text-danger">
+                    <i class="fa fa-trash"></i> ＞ 全データクリア
+                </a>
             </li>
         </ul>
     </nav>
@@ -670,6 +680,28 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">キャンセル</button>
                 <button type="button" class="btn btn-primary" id="save-service-auth">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 全データクリア確認モーダル -->
+<div class="modal fade" id="clearAllDataModal" tabindex="-1" role="dialog" aria-labelledby="clearAllDataModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="clearAllDataModalLabel">データクリアの確認</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p><strong>全ての案件データをクリアします。</strong></p>
+                <p class="text-danger">この操作は元に戻せません。よろしいですか？</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-danger" id="confirm-clear-all-data">クリア実行</button>
             </div>
         </div>
     </div>
@@ -1324,6 +1356,48 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 300);
         }, 3000);
     }
+
+    // 全データクリアリンクのクリックイベント
+    $('#clear-all-data-link').click(function(e) {
+        e.preventDefault();
+        $('#clearAllDataModal').modal('show');
+    });
+    
+    // 全データクリア確認ボタンのクリックイベント
+    $('#confirm-clear-all-data').click(function() {
+        // 全データクリア
+        $.ajax({
+            url: '/api/job_history/clear',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({}),
+            success: function(response) {
+                if (response.success) {
+                    // モーダルを閉じる
+                    $('#clearAllDataModal').modal('hide');
+                    
+                    // 成功メッセージを表示
+                    alert(response.message);
+                    
+                    // ページをリロード
+                    location.reload();
+                } else {
+                    alert('エラー: ' + response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                let errorMsg = 'データのクリアに失敗しました。';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.message) {
+                        errorMsg = response.message;
+                    }
+                } catch (e) {}
+                
+                alert('エラー: ' + errorMsg);
+            }
+        });
+    });
 });
 </script>
 {% endblock %} 

@@ -1,0 +1,490 @@
+{% extends "bootstrap/base.html" %}
+
+{% block title %}案件履歴 - クラウドワークス案件一覧{% endblock %}
+
+{% block styles %}
+{{super()}}
+<style>
+    .wrapper {
+        display: flex;
+        width: 100%;
+    }
+    
+    #sidebar {
+        min-width: 250px;
+        max-width: 250px;
+        min-height: 100vh;
+        background: #343a40;
+        color: #fff;
+        transition: all 0.3s;
+    }
+    
+    #sidebar .sidebar-header {
+        padding: 20px;
+        background: #2c3136;
+    }
+    
+    #sidebar ul.components {
+        padding: 20px 0;
+        border-bottom: 1px solid #47748b;
+    }
+    
+    #sidebar ul li a {
+        padding: 10px;
+        font-size: 1.1em;
+        display: block;
+        color: #fff;
+        text-decoration: none;
+    }
+    
+    #sidebar ul li a:hover {
+        background: #2c3136;
+    }
+    
+    #content {
+        width: 100%;
+        padding: 20px;
+        min-height: 100vh;
+        transition: all 0.3s;
+    }
+    
+    .job-file-item {
+        cursor: pointer;
+    }
+    
+    .job-file-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .job-file-active {
+        background-color: #e9ecef;
+    }
+    
+    .loading-spinner {
+        display: none;
+        text-align: center;
+        margin: 20px 0;
+    }
+    
+    .file-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
+    
+    .file-actions {
+        display: flex;
+        gap: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wrapper">
+    <!-- サイドバー -->
+    <nav id="sidebar">
+        <div class="sidebar-header">
+            <h3>案件naviCHO <small style="font-size: 0.6em;">v0.4.2</small></h3>
+        </div>
+
+        <ul class="list-unstyled components">
+            <li>
+                <a href="{{ url_for('index') }}">
+                    <i class="fa fa-arrow-left"></i> ＜ 戻る
+                </a>
+            </li>
+            <li>
+                <a href="#" class="service-link" data-service="crowdworks">クラウドワークス</a>
+            </li>
+            <li>
+                <a href="#" class="service-link disabled" data-service="coconala" style="color: #6c757d; cursor: not-allowed; opacity: 0.65;">ココナラ</a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- ページコンテンツ -->
+    <div id="content">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <div class="container-fluid">
+                <h2>案件履歴管理</h2>
+            </div>
+        </nav>
+
+        <div class="container-fluid">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <p><strong>案件履歴管理について</strong></p>
+                        <p>過去に取得した案件データを閲覧できます。14日以前の古いデータは自動的に削除されます。</p>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- 案件履歴ファイル一覧 -->
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>履歴一覧</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group" id="job-files-list">
+                                {% for job_file in job_files %}
+                                <a href="#" class="list-group-item list-group-item-action job-file-item" 
+                                   data-file="{{ job_file.path }}">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ job_file.date }}</h6>
+                                        <small>{{ job_file.job_count }}件</small>
+                                    </div>
+                                </a>
+                                {% endfor %}
+                                
+                                {% if not job_files %}
+                                <div class="list-group-item text-center text-muted">
+                                    履歴データがありません
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 案件一覧表示 -->
+                <div class="col-md-9">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 id="current-file-title">案件一覧</h5>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="file-info" class="file-info" style="display: none;">
+                                <div>
+                                    <strong>取得日時:</strong> <span id="file-date"></span>
+                                </div>
+                                <div>
+                                    <strong>案件数:</strong> <span id="file-job-count"></span>件
+                                </div>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead class="thead-dark">
+                                        <tr>
+                                            <th class="check-column">応募</th>
+                                            <th class="title-column">タイトル</th>
+                                            <th class="detail-column">詳細</th>
+                                            <th class="budget-column">予算</th>
+                                            <th class="client-column">クライアント</th>
+                                            <th class="date-column">投稿日</th>
+                                            <th class="reason-column">選定理由</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="jobs-table-body">
+                                        {% for job in jobs %}
+                                        <tr>
+                                            <td class="check-column">
+                                                <div class="form-check">
+                                                    <input type="checkbox" 
+                                                           class="form-check-input job-check" 
+                                                           data-url="{{ job.url }}"
+                                                           {% if job.url in checks and checks[job.url].checked %}checked{% endif %}
+                                                           disabled>
+                                                </div>
+                                            </td>
+                                            <td class="title-column">
+                                                <a href="{{ job.url }}" target="_blank">{{ job.title }}</a>
+                                            </td>
+                                            <td class="detail-column">
+                                                <button class="btn btn-sm btn-info" 
+                                                        data-toggle="modal" 
+                                                        data-target="#detailsModal"
+                                                        data-title="{{ job.title }}"
+                                                        data-budget="{{ job.budget }}"
+                                                        data-client="{{ job.client }}"
+                                                        data-posted-date="{{ job.posted_date }}"
+                                                        data-description="{{ job.detail_description }}">
+                                                    詳細を表示
+                                                </button>
+                                            </td>
+                                            <td class="budget-column">{{ job.budget }}</td>
+                                            <td class="client-column">{{ job.client }}</td>
+                                            <td class="date-column">{{ job.posted_date }}</td>
+                                            <td class="reason-column">{{ job.gpt_reason if job.gpt_reason else '' }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                        
+                                        {% if not jobs %}
+                                        <tr>
+                                            <td colspan="7" class="text-center">
+                                                <p class="text-muted my-5">左側のリストから履歴を選択するか、ホームページで新しい案件を取得してください。</p>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="loading-spinner" id="loading-spinner">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="sr-only">読み込み中...</span>
+                                </div>
+                                <p>案件データを読み込んでいます...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 案件詳細モーダル -->
+<div class="modal fade" id="detailsModal" tabindex="-1" role="dialog" aria-labelledby="detailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailsModalLabel">案件詳細</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="job-details">
+                    <h4 id="modal-title"></h4>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>予算:</strong> <span id="modal-budget"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>クライアント:</strong> <span id="modal-client"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>投稿日:</strong> <span id="modal-posted-date"></span>
+                        </div>
+                    </div>
+                    <div class="job-description">
+                        <h5>詳細説明</h5>
+                        <div id="modal-description"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{super()}}
+<script>
+    $(document).ready(function() {
+        let currentJobFile = null;
+        
+        // 案件ファイル選択時の処理
+        $('.job-file-item').click(function(e) {
+            e.preventDefault();
+            
+            // 選択状態の更新
+            $('.job-file-item').removeClass('active');
+            $(this).addClass('active');
+            
+            // 選択されたファイルのパスを取得
+            currentJobFile = $(this).data('file');
+            
+            // 案件データを読み込む
+            loadJobContent(currentJobFile);
+        });
+        
+        // 案件データを読み込む関数
+        function loadJobContent(filePath) {
+            // ローディング表示
+            $('#jobs-table-body').hide();
+            $('#file-info').hide();
+            $('#loading-spinner').show();
+            
+            // APIから案件データを取得
+            $.ajax({
+                url: '/api/job_history/content',
+                method: 'GET',
+                data: { file: filePath },
+                success: function(response) {
+                    if (response.success) {
+                        // ファイル情報を表示
+                        $('#file-date').text(response.date);
+                        $('#file-job-count').text(response.job_count);
+                        $('#file-info').show();
+                        
+                        // 現在のファイル名を表示
+                        $('#current-file-title').text('案件一覧: ' + response.date);
+                        
+                        // クリアモーダルの日時を設定
+                        $('#clear-file-date').text(response.date);
+                        
+                        // 案件データをテーブルに表示
+                        let tableHtml = '';
+                        if (response.jobs.length > 0) {
+                            response.jobs.forEach(function(job) {
+                                tableHtml += `
+                                    <tr>
+                                        <td class="check-column">
+                                            <div class="form-check">
+                                                <input type="checkbox" 
+                                                       class="form-check-input job-check" 
+                                                       data-url="${job.url}"
+                                                       disabled>
+                                            </div>
+                                        </td>
+                                        <td class="title-column">
+                                            <a href="${job.url}" target="_blank">${job.title}</a>
+                                        </td>
+                                        <td class="detail-column">
+                                            <button class="btn btn-sm btn-info" 
+                                                    data-toggle="modal" 
+                                                    data-target="#detailsModal"
+                                                    data-title="${job.title}"
+                                                    data-budget="${job.budget || ''}"
+                                                    data-client="${job.client || ''}"
+                                                    data-posted-date="${job.posted_date || ''}"
+                                                    data-description="${(job.detail_description || '').replace(/"/g, '&quot;')}">
+                                                詳細を表示
+                                            </button>
+                                        </td>
+                                        <td class="budget-column">${job.budget || ''}</td>
+                                        <td class="client-column">${job.client || ''}</td>
+                                        <td class="date-column">${job.posted_date || ''}</td>
+                                        <td class="reason-column">${job.gpt_reason || ''}</td>
+                                    </tr>
+                                `;
+                            });
+                        } else {
+                            tableHtml = `
+                                <tr>
+                                    <td colspan="7" class="text-center">
+                                        <p class="text-muted my-5">この履歴には案件データがありません。</p>
+                                    </td>
+                                </tr>
+                            `;
+                        }
+                        
+                        $('#jobs-table-body').html(tableHtml);
+                        
+                        // チェックボックスの状態を復元
+                        updateCheckboxes();
+                        
+                        // チェックボックスのイベントリスナーを設定
+                        setupCheckboxListeners();
+                    } else {
+                        $('#jobs-table-body').html(`
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <p class="text-danger my-5">エラー: ${response.message}</p>
+                                </td>
+                            </tr>
+                        `);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    let errorMsg = '案件データの読み込みに失敗しました。';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.message) {
+                            errorMsg = response.message;
+                        }
+                    } catch (e) {}
+                    
+                    $('#jobs-table-body').html(`
+                        <tr>
+                            <td colspan="7" class="text-center">
+                                <p class="text-danger my-5">エラー: ${errorMsg}</p>
+                            </td>
+                        </tr>
+                    `);
+                },
+                complete: function() {
+                    // ローディング非表示
+                    $('#loading-spinner').hide();
+                    $('#jobs-table-body').show();
+                }
+            });
+        }
+        
+        // チェックボックスの状態を更新する関数
+        function updateCheckboxes() {
+            // サーバーからチェック状態を取得
+            $.ajax({
+                url: '/api/get_checks',
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        const checks = response.checks;
+                        
+                        // チェックボックスの状態を更新
+                        $('.job-check').each(function() {
+                            const url = $(this).data('url');
+                            if (checks[url] && checks[url].checked) {
+                                $(this).prop('checked', true);
+                            } else {
+                                $(this).prop('checked', false);
+                            }
+                        });
+                    }
+                }
+            });
+        }
+        
+        // チェックボックスのイベントリスナーを設定する関数
+        function setupCheckboxListeners() {
+            $('.job-check').change(function() {
+                const url = $(this).data('url');
+                const checked = $(this).prop('checked');
+                
+                // チェック状態をサーバーに送信
+                $.ajax({
+                    url: '/update_check',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        url: url,
+                        checked: checked
+                    }),
+                    success: function(response) {
+                        console.log('チェック状態を更新しました');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('チェック状態の更新に失敗しました', error);
+                    }
+                });
+            });
+        }
+        
+        // 詳細モーダルの設定
+        $('#detailsModal').on('show.bs.modal', function (event) {
+            const button = $(event.relatedTarget);
+            const title = button.data('title');
+            const budget = button.data('budget');
+            const client = button.data('client');
+            const postedDate = button.data('posted-date');
+            const description = button.data('description');
+            
+            const modal = $(this);
+            modal.find('#modal-title').text(title);
+            modal.find('#modal-budget').text(budget);
+            modal.find('#modal-client').text(client);
+            modal.find('#modal-posted-date').text(postedDate);
+            modal.find('#modal-description').html(description);
+        });
+        
+        // 初期表示時に最初のファイルを選択
+        if ($('.job-file-item').length > 0) {
+            $('.job-file-item').first().click();
+        }
+    });
+</script>
+{% endblock %} 

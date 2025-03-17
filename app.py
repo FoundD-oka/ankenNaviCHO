@@ -6,7 +6,7 @@ from functools import wraps
 import json
 import os
 import glob
-from datetime import datetime
+from datetime import datetime, timedelta
 import traceback
 from dotenv import load_dotenv, set_key
 from pathlib import Path
@@ -15,6 +15,8 @@ import sys
 from bulk_apply import register_bulk_apply_routes, init_bulk_apply
 from supabase import create_client, Client
 import logging
+import re
+from openai import OpenAI
 
 # ロガーの設定
 logging.basicConfig(
@@ -178,6 +180,243 @@ def get_latest_filtered_json():
     latest_file = max(json_files, key=os.path.getctime)
     with open(latest_file, 'r', encoding='utf-8') as f:
         return json.load(f)
+
+# 全てのフィルタリング済みJSONファイルの一覧を取得する関数
+def get_all_filtered_json_files():
+    json_files = glob.glob('crawled_data/*_filtered.json')
+    if not json_files:
+        return []
+    
+    # ファイル情報を取得
+    file_info = []
+    for file_path in json_files:
+        file_name = os.path.basename(file_path)
+        # ファイル名からタイムスタンプを抽出（jobs_YYYYMMDD_HHMMSS_filtered.json）
+        match = re.search(r'jobs_(\d{8})_(\d{6})_filtered\.json', file_name)
+        if match:
+            date_str = match.group(1)
+            time_str = match.group(2)
+            # 日付フォーマットを変換
+            formatted_date = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]} {time_str[:2]}:{time_str[2:4]}:{time_str[4:6]}"
+            
+            # 案件数を取得
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    jobs = json.load(f)
+                    job_count = len(jobs)
+            except:
+                job_count = 0
+            
+            file_info.append({
+                'path': file_path,
+                'name': file_name,
+                'date': formatted_date,
+                'timestamp': f"{date_str}_{time_str}",
+                'job_count': job_count
+            })
+    
+    # 日付の降順でソート
+    file_info.sort(key=lambda x: x['timestamp'], reverse=True)
+    return file_info
+
+# 特定のフィルタリング済みJSONファイルを読み込む関数
+def load_filtered_json(file_path):
+    if not os.path.exists(file_path):
+        return []
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            jobs = json.load(f)
+            # 詳細テキストの改行をHTMLの<br>タグに変換
+            for job in jobs:
+                if 'detail_description' in job:
+                    job['detail_description'] = job['detail_description'].replace('\n', '<br>')
+            return jobs
+    except Exception as e:
+        logger.error(f"ファイルの読み込みに失敗: {str(e)}")
+        return []
+
+# 案件データをクリアする関数
+def clear_job_data(file_path=None):
+    """
+    案件データをクリアする
+    
+    Args:
+        file_path: クリアする特定のファイルパス。Noneの場合は全てのファイルをクリア
+    
+    Returns:
+        削除されたファイル数
+    """
+    try:
+        if file_path:
+            # 特定のファイルのみ削除
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                # 対応する非フィルタリングファイルも削除
+                raw_file = file_path.replace('_filtered.json', '.json')
+                if os.path.exists(raw_file):
+                    os.remove(raw_file)
+                return 1
+            return 0
+        else:
+            # 全てのファイルを削除（settings.jsonとchecked_jobs.jsonは除く）
+            count = 0
+            for file_path in glob.glob('crawled_data/*.json'):
+                if not file_path.endswith('settings.json') and not file_path.endswith('checked_jobs.json'):
+                    os.remove(file_path)
+                    count += 1
+            return count
+    except Exception as e:
+        logger.error(f"案件データのクリアに失敗: {str(e)}")
+        raise
+
+# 古い案件データを削除する関数
+def clear_old_job_data(days=14):
+    """
+    指定した日数より古い案件データを削除する
+    
+    Args:
+        days: 保持する日数（デフォルト: 14日）
+    
+    Returns:
+        削除されたファイル数
+    """
+    try:
+        # 現在の日時から指定日数前の日時を計算
+        cutoff_date = datetime.now() - timedelta(days=days)
+        logger.info(f"{days}日以前（{cutoff_date.strftime('%Y-%m-%d')}より前）の案件データを削除します")
+        
+        # 削除対象のファイルを検索
+        count = 0
+        for file_path in glob.glob('crawled_data/jobs_*.json'):
+            # ファイル名からタイムスタンプを抽出（jobs_YYYYMMDD_HHMMSS.json または jobs_YYYYMMDD_HHMMSS_filtered.json）
+            file_name = os.path.basename(file_path)
+            match = re.search(r'jobs_(\d{8})_(\d{6})', file_name)
+            
+            if match:
+                date_str = match.group(1)
+                time_str = match.group(2)
+                
+                # ファイルの日時を解析
+                try:
+                    file_date = datetime.strptime(f"{date_str}_{time_str}", "%Y%m%d_%H%M%S")
+                    
+                    # 指定日数より古い場合は削除
+                    if file_date < cutoff_date:
+                        logger.info(f"古いファイルを削除: {file_path} ({file_date.strftime('%Y-%m-%d %H:%M:%S')})")
+                        os.remove(file_path)
+                        count += 1
+                except ValueError:
+                    # 日付解析エラーの場合はスキップ
+                    logger.warning(f"ファイル名の日付解析に失敗: {file_path}")
+                    continue
+        
+        logger.info(f"合計 {count} 件の古い案件データファイルを削除しました")
+        return count
+    except Exception as e:
+        logger.error(f"古い案件データの削除に失敗: {str(e)}\n{traceback.format_exc()}")
+        return 0
+
+# 過去の案件を再フィルタリングする関数
+def refilter_jobs(filter_prompt, model="gpt-4o-mini"):
+    """
+    保存されている全ての案件データに対して再フィルタリングを実行
+    
+    Args:
+        filter_prompt: フィルタリング条件
+        model: 使用するAIモデル
+    
+    Returns:
+        再フィルタリングされた案件数
+    """
+    try:
+        # 全ての非フィルタリングJSONファイルを取得
+        raw_files = glob.glob('crawled_data/jobs_*.json')
+        raw_files = [f for f in raw_files if not f.endswith('_filtered.json')]
+        
+        if not raw_files:
+            return 0
+            
+        # OpenAI クライアントの初期化
+        settings = load_settings()
+        client = OpenAI(
+            api_key=settings.get('api_key', '')
+        )
+        
+        # 各ファイルに対して再フィルタリングを実行
+        total_filtered = 0
+        
+        for raw_file in raw_files:
+            try:
+                # 元データを読み込み
+                with open(raw_file, 'r', encoding='utf-8') as f:
+                    jobs = json.load(f)
+                
+                # フィルタリング設定
+                config = {
+                    'model': model,
+                    'prompt': filter_prompt,
+                    'temperature': 0,
+                    'max_tokens': 100
+                }
+                
+                # フィルタリング実行
+                filtered_jobs = []
+                for job in jobs:
+                    try:
+                        # 案件情報をテキスト形式に変換
+                        job_text = f"""
+                        タイトル: {job.get('title', 'N/A')}
+                        予算: {job.get('budget', 'N/A')}
+                        クライアント: {job.get('client', 'N/A')}
+                        投稿日: {job.get('posted_date', 'N/A')}
+                        説明: {job.get('description', 'N/A')}
+                        """
+                        
+                        # GPTにフィルタリングを依頼
+                        response = client.chat.completions.create(
+                            model=config['model'],
+                            messages=[
+                                {"role": "system", "content": "あなたは案件フィルタリングを行うアシスタントです。与えられた条件に基づいて案件を評価し、条件に合致するかどうかを判断してください。"},
+                                {"role": "user", "content": f"以下の案件が条件「{config['prompt']}」に合致するか判断してください。\n\n{job_text}\n\nJSON形式で回答してください: {{\"match\": true/false, \"reason\": \"理由\"}}"}
+                            ],
+                            temperature=config['temperature'],
+                            max_tokens=config['max_tokens']
+                        )
+                        
+                        # レスポンスからJSONを抽出
+                        result_text = response.choices[0].message.content
+                        result_json = re.search(r'\{.*\}', result_text, re.DOTALL)
+                        if result_json:
+                            result = json.loads(result_json.group(0))
+                        else:
+                            result = {"match": True, "reason": "フォーマットエラー（安全のため含める）"}
+                        
+                        # 条件に合致する場合のみ追加
+                        if result.get('match', True):
+                            job['gpt_reason'] = result.get('reason', '')
+                            filtered_jobs.append(job)
+                    except Exception as e:
+                        logger.error(f"案件フィルタリング中にエラー: {str(e)}")
+                        # エラーの場合は安全のため含める
+                        filtered_jobs.append(job)
+                
+                # フィルタリング結果を保存
+                filtered_file = raw_file.replace('.json', '_filtered.json')
+                with open(filtered_file, 'w', encoding='utf-8') as f:
+                    json.dump(filtered_jobs, f, ensure_ascii=False, indent=2)
+                
+                total_filtered += len(filtered_jobs)
+                
+            except Exception as e:
+                logger.error(f"ファイル {raw_file} の再フィルタリング中にエラー: {str(e)}")
+                continue
+        
+        return total_filtered
+        
+    except Exception as e:
+        logger.error(f"再フィルタリング処理中にエラー: {str(e)}")
+        raise
 
 # チェック状態を保存するファイル
 CHECKS_FILE = 'crawled_data/checked_jobs.json'
@@ -680,5 +919,243 @@ def fetch_status():
             status_code=500
         )
 
+@app.route('/job_history')
+@auth_required
+def job_history_page():
+    """案件履歴管理ページを表示"""
+    try:
+        # 利用可能な案件履歴ファイル一覧を取得
+        job_files = get_all_filtered_json_files()
+        
+        # 最新のファイルから案件を読み込む
+        jobs = []
+        if job_files:
+            jobs = load_filtered_json(job_files[0]['path'])
+            
+        checks = load_checks()
+        settings = load_settings()
+        
+        return render_template('job_history.html', 
+                              job_files=job_files, 
+                              jobs=jobs, 
+                              current_file=job_files[0] if job_files else None,
+                              checks=checks, 
+                              settings=settings)
+    except Exception as e:
+        flash('案件履歴ページの表示中にエラーが発生しました。', 'danger')
+        logger.error(f"案件履歴ページ表示エラー: {str(e)}\n{traceback.format_exc()}")
+        return redirect(url_for('index'))
+
+@app.route('/api/job_history/files')
+@auth_required
+def get_job_history_files_api():
+    """利用可能な案件履歴ファイル一覧を取得するAPI"""
+    try:
+        job_files = get_all_filtered_json_files()
+        return jsonify({
+            'success': True,
+            'job_files': job_files
+        })
+    except Exception as e:
+        return handle_error(
+            e,
+            error_type="案件履歴ファイル一覧取得エラー",
+            user_message="案件履歴ファイル一覧の取得に失敗しました。",
+            status_code=500
+        )
+
+@app.route('/api/job_history/content')
+@auth_required
+def get_job_history_content():
+    """特定の案件履歴ファイルの内容を取得するAPI"""
+    try:
+        file_path = request.args.get('file')
+        
+        # パスインジェクション対策
+        if not file_path or '..' in file_path or not file_path.startswith('crawled_data/') or not file_path.endswith('_filtered.json'):
+            return jsonify({
+                'success': False,
+                'message': '無効な案件ファイルパスです。'
+            }), 400
+            
+        # ファイルの存在確認
+        if not os.path.exists(file_path):
+            return jsonify({
+                'success': False,
+                'message': '案件ファイルが見つかりません。'
+            }), 404
+            
+        # ファイルから案件を読み込む
+        jobs = load_filtered_json(file_path)
+        
+        # ファイル情報を取得
+        file_name = os.path.basename(file_path)
+        match = re.search(r'jobs_(\d{8})_(\d{6})_filtered\.json', file_name)
+        date_str = ""
+        if match:
+            date_str = f"{match.group(1)[:4]}-{match.group(1)[4:6]}-{match.group(1)[6:8]} {match.group(2)[:2]}:{match.group(2)[2:4]}:{match.group(2)[4:6]}"
+        
+        return jsonify({
+            'success': True,
+            'jobs': jobs,
+            'file_name': file_name,
+            'date': date_str,
+            'job_count': len(jobs)
+        })
+        
+    except Exception as e:
+        return handle_error(
+            e,
+            error_type="案件履歴取得エラー",
+            user_message="案件履歴の取得に失敗しました。",
+            status_code=500
+        )
+
+@app.route('/api/job_history/clear', methods=['POST'])
+@auth_required
+def clear_job_history():
+    """案件履歴をクリアするAPI"""
+    try:
+        file_path = request.json.get('file')
+        
+        if file_path:
+            # パスインジェクション対策
+            if '..' in file_path or not file_path.startswith('crawled_data/') or not file_path.endswith('_filtered.json'):
+                return jsonify({
+                    'success': False,
+                    'message': '無効な案件ファイルパスです。'
+                }), 400
+                
+            # ファイルの存在確認
+            if not os.path.exists(file_path):
+                return jsonify({
+                    'success': False,
+                    'message': '案件ファイルが見つかりません。'
+                }), 404
+                
+            # 特定のファイルをクリア
+            clear_job_data(file_path)
+            message = '指定された案件履歴をクリアしました。'
+        else:
+            # 全てのファイルをクリア
+            count = clear_job_data()
+            message = f'{count}件の案件履歴ファイルをクリアしました。'
+            
+        # 操作をログに記録
+        logger.info(f"案件履歴がクリアされました: {file_path if file_path else '全て'}")
+        
+        return jsonify({
+            'success': True,
+            'message': message
+        })
+        
+    except Exception as e:
+        return handle_error(
+            e,
+            error_type="案件履歴クリアエラー",
+            user_message="案件履歴のクリアに失敗しました。",
+            status_code=500
+        )
+
+@app.route('/api/job_history/refilter', methods=['POST'])
+@auth_required
+def refilter_job_history():
+    """案件履歴を再フィルタリングするAPI"""
+    try:
+        data = request.get_json()
+        filter_prompt = data.get('filter_prompt', '')
+        model = data.get('model', 'gpt-4o-mini')
+        
+        if not filter_prompt:
+            return jsonify({
+                'success': False,
+                'message': 'フィルター条件が指定されていません。'
+            }), 400
+            
+        # 再フィルタリングを実行
+        total_filtered = refilter_jobs(filter_prompt, model)
+        
+        # 設定を更新
+        settings = load_settings()
+        settings['filter_prompt'] = filter_prompt
+        if model != settings.get('model'):
+            settings['model'] = model
+        save_settings(settings)
+        
+        # 操作をログに記録
+        logger.info(f"案件の再フィルタリングが完了しました: {total_filtered}件")
+        
+        return jsonify({
+            'success': True,
+            'message': f'再フィルタリングが完了しました。{total_filtered}件の案件がフィルタリングされました。',
+            'total_filtered': total_filtered
+        })
+        
+    except Exception as e:
+        return handle_error(
+            e,
+            error_type="再フィルタリングエラー",
+            user_message="案件の再フィルタリングに失敗しました。",
+            status_code=500
+        )
+
+@app.route('/api/get_checks')
+@auth_required
+def get_checks_api():
+    """チェック状態を取得するAPI"""
+    try:
+        checks = load_checks()
+        return jsonify({
+            'success': True,
+            'checks': checks
+        })
+    except Exception as e:
+        return handle_error(
+            e,
+            error_type="チェック状態取得エラー",
+            user_message="チェック状態の取得に失敗しました。",
+            status_code=500
+        )
+
+@app.route('/api/clear_old_data', methods=['POST'])
+@auth_required
+def clear_old_data_api():
+    """古い案件データを削除するAPI"""
+    try:
+        data = request.get_json()
+        days = data.get('days', 14)  # デフォルトは14日
+        
+        # 日数の検証
+        try:
+            days = int(days)
+            if days < 1:
+                return jsonify({
+                    'success': False,
+                    'message': '日数は1以上の整数を指定してください。'
+                }), 400
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': '日数は整数で指定してください。'
+            }), 400
+            
+        # 古いデータを削除
+        count = clear_old_job_data(days)
+        
+        return jsonify({
+            'success': True,
+            'message': f'{days}日以前の案件データを削除しました。合計 {count} 件のファイルを削除しました。',
+            'deleted_count': count
+        })
+    except Exception as e:
+        return handle_error(
+            e,
+            error_type="古いデータ削除エラー",
+            user_message="古い案件データの削除に失敗しました。",
+            status_code=500
+        )
+
 if __name__ == '__main__':
+    # 起動時に古いデータを削除
+    clear_old_job_data()
     app.run(host='0.0.0.0', port=3000, debug=True)
