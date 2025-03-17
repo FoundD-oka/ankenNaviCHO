@@ -13,7 +13,6 @@ selenium-project/
 │   ├── checked_jobs.json # チェック済み案件の状態管理
 │   └── jobs_*.json      # クローリング結果（日時付き）
 ├── logs/                # ログファイル保存ディレクトリ
-├── static/             # 静的ファイル（CSS、JavaScript等）
 ├── templates/          # HTMLテンプレート
 │   ├── index.html     # メインページ
 │   └── login.html     # ログインページ
