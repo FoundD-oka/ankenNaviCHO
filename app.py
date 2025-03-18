@@ -1285,4 +1285,9 @@ def chromedriver_error():
 if __name__ == '__main__':
     # 起動時に古いデータを削除
     clear_old_job_data()
-    app.run(host='0.0.0.0', port=3000, debug=True)
+    
+    # .envファイルから環境変数PORTを取得
+    port = int(os.getenv('PORT', 8000))
+    debug_mode = os.getenv('FLASK_DEBUG', '0') == '1'
+    
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)
