@@ -91,6 +91,7 @@ csrf.exempt_views = []
 csrf.exempt('/api/check_updates')
 csrf.exempt('/api/perform_update')
 csrf.exempt('/api/update_status')
+csrf.exempt('/bulk_apply')
 
 # Supabaseクライアントの初期化
 supabase: Client = create_client(
@@ -615,17 +616,26 @@ def index():
 @app.route('/update_check', methods=['POST'])
 @auth_required
 def update_check():
-    data = request.get_json()
-    job_url = data.get('url')
-    is_checked = data.get('checked')
-    
-    checks = load_checks()
-    checks[job_url] = {
-        'checked': is_checked,
-        'updated_at': datetime.now().isoformat()
-    }
-    save_checks(checks)
-    return jsonify({'status': 'success'})
+    try:
+        data = request.get_json()
+        job_url = data.get('url')
+        is_checked = data.get('checked')
+        
+        logger.info(f"チェック状態の更新リクエスト: URL={job_url}, checked={is_checked}")
+        
+        checks = load_checks()
+        checks[job_url] = {
+            'checked': is_checked,
+            'updated_at': datetime.now().isoformat()
+        }
+        save_checks(checks)
+        
+        logger.info(f"チェック状態を更新しました: URL={job_url}, checked={is_checked}")
+        
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        logger.error(f"チェック状態の更新に失敗: {str(e)}\n{traceback.format_exc()}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/update_settings', methods=['POST'])
 @auth_required

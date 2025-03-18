@@ -1,0 +1,4 @@
+2025-03-18 16:31:17.287 | INFO     | bulk_apply:bulk_apply:466 - 一括応募プロセスを開始: 2件の案件
+2025-03-18 16:31:18.966 | INFO     | bulk_apply:login_to_crowdworks:128 - ログイン処理を開始
+2025-03-18 16:31:27.931 | INFO     | bulk_apply:apply_to_job:205 - 案件への応募を開始: https://crowdworks.jp/public/jobs/11875968
+2025-03-18 16:31:42.822 | INFO     | bulk_apply:apply_to_job:205 - 案件への応募を開始: https://crowdworks.jp/public/jobs/11901863

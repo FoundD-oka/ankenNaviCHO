@@ -817,6 +817,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify({
                     url: url,
@@ -883,6 +884,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify({
                     urls: checkedJobs
@@ -1077,6 +1079,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td class="reason-column">${job.gpt_reason || ''}</td>
             `;
             tbody.appendChild(tr);
+        });
+        
+        // テーブル更新後にチェックボックスのイベントリスナーを再設定
+        document.querySelectorAll('.job-check').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const url = this.dataset.url;
+                const checked = this.checked;
+                
+                fetch('/update_check', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        checked: checked
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status !== 'success') {
+                        console.error('チェック状態の更新に失敗しました');
+                        this.checked = !checked;  // 失敗した場合は元の状態に戻す
+                    }
+                })
+                .catch(error => {
+                    console.error('エラー:', error);
+                    this.checked = !checked;  // エラーの場合は元の状態に戻す
+                });
+            });
         });
     }
 
