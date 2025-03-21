@@ -8,3 +8,24 @@
 *.pyo
 *.pyd
 .DS_Store
+
+# ビルド生成物
+SeleniumAutomation.app/
+build/
+dist/
+universal_build/
+*.dmg
+*.spec
+venv/
+temp_icons/AppIcon.iconset/
+
+# スタンドアロン実行関連
+install_standalone.sh
+run_standalone.sh
+standalone_app.py
+
+# ユニバーサルビルド関連
+HOWTO_UNIVERSAL_BUILD.md
+README_UNIVERSAL.md
+create_universal_binary.sh
+merge_universal.sh
