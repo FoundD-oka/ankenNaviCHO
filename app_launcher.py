@@ -17,19 +17,24 @@ from dotenv import load_dotenv, set_key
 import traceback
 
 # ロギング設定
-log_dir = Path('./logs')
-if not log_dir.exists():
-    log_dir.mkdir(parents=True)
+def setup_logging():
+    """ロギングの設定を行う"""
+    log_dir = Path('./logs')
+    if not log_dir.exists():
+        log_dir.mkdir(parents=True)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('logs/launcher.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger('app_launcher')
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_dir / 'launcher.log', encoding='utf-8'),
+            logging.StreamHandler()
+        ]
+    )
+    return logging.getLogger('app_launcher')
+
+# グローバルなロガーを設定
+logger = setup_logging()
 
 class AppLauncher:
     """アプリケーション起動を管理するクラス"""
@@ -37,24 +42,38 @@ class AppLauncher:
     def __init__(self):
         self.app_process = None
         self.port = 8000  # デフォルトポート
-        self.env_file = Path('.env')
         self.bundle_dir = self._get_bundle_dir()
+        self.env_file = self.bundle_dir / '.env'
+        logger.info(f"アプリケーションを初期化しています。バンドルディレクトリ: {self.bundle_dir}")
         self.initialize_environment()
     
     def _get_bundle_dir(self):
         """アプリケーションバンドルのディレクトリを取得"""
         if getattr(sys, 'frozen', False):
             # .appとして実行されている場合
-            bundle_dir = Path(os.path.dirname(os.path.dirname(sys.executable)))
-            return bundle_dir / 'Resources'
+            if platform.system() == 'Darwin':
+                # macOS
+                if hasattr(sys, '_MEIPASS'):
+                    # PyInstallerの場合
+                    bundle_dir = Path(sys._MEIPASS)
+                else:
+                    # py2appの場合
+                    bundle_dir = Path(os.path.dirname(os.path.dirname(sys.executable))) / 'Resources'
+            else:
+                # Windows/Linuxの場合
+                bundle_dir = Path(os.path.dirname(sys.executable))
+            logger.info(f"フローズンアプリケーションとして実行中: {bundle_dir}")
+            return bundle_dir
         else:
             # 開発環境の場合
-            return Path(os.path.dirname(os.path.abspath(__file__)))
+            bundle_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+            logger.info(f"開発環境として実行中: {bundle_dir}")
+            return bundle_dir
     
     def initialize_environment(self):
         """環境を初期化"""
         try:
-            logger.info(f"アプリケーションの初期化を開始します。バンドルディレクトリ: {self.bundle_dir}")
+            logger.info(f"環境を初期化しています。カレントディレクトリを変更: {self.bundle_dir}")
             
             # カレントディレクトリをバンドルディレクトリに設定
             os.chdir(self.bundle_dir)
@@ -190,9 +209,12 @@ class AppLauncher:
             self.update_port_in_env(port)
             
             # アプリケーションの起動コマンド
+            app_path = self.bundle_dir / 'app.py'
+            logger.info(f"アプリケーションパス: {app_path}")
+            
             cmd = [
                 sys.executable,
-                os.path.join(self.bundle_dir, 'app.py')
+                str(app_path)
             ]
             
             # 環境変数を設定
@@ -206,7 +228,8 @@ class AppLauncher:
                 env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
+                cwd=str(self.bundle_dir)
             )
             
             # サーバー起動を待機

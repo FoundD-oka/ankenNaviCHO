@@ -13,3 +13,11 @@ supabase==1.2.0
 flask-login==0.6.3
 semver==3.0.2
 zipfile36==0.1.3
+# OpenAIとPydantic関連の依存関係を明示
+openai>=1.0.0
+pydantic==2.10.6
+pydantic-core==2.27.2
+annotated-types>=0.6.0
+typing-extensions>=4.8.0
+# ユニバーサルバイナリ構築時にも必要
+py2app>=0.28.8

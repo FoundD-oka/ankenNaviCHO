@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 from setuptools import setup
+import os
+
+# ユニバーサルバイナリビルドの場合は環境変数ARCHFLAGSが設定されているか確認
+is_universal = 'ARCHFLAGS' in os.environ and '-arch x86_64' in os.environ['ARCHFLAGS'] and '-arch arm64' in os.environ['ARCHFLAGS']
 
 APP = ['app_launcher.py']
 DATA_FILES = [
@@ -25,36 +29,57 @@ OPTIONS = {
         'flask_login',
         'flask_wtf',
         'selenium',
+        'python_dotenv',
         'dotenv',
         'supabase',
-        'openai',
         'pandas',
         'bs4',
         'requests',
         'apscheduler',
         'loguru',
         'semver',
-        'zipfile36'
+        'zipfile36',
+        'jinja2',
+        'werkzeug',
+        'wtforms',
+        'itsdangerous'
     ],
-    'site_packages': True,
-    'resources': DATA_FILES,
+    'includes': [
+        'queue',
+        'threading',
+        'socket',
+        'json',
+        'time',
+        'logging',
+        'traceback',
+        'shutil'
+    ],
+    'excludes': ['tkinter', 'PyQt5', 'PyQt6', 'PySide2', 'PySide6'],
+    'iconfile': 'icon.icns',
     'plist': {
-        'CFBundleName': 'YourAppName',
-        'CFBundleDisplayName': 'YourAppName',
-        'CFBundleGetInfoString': 'ワンクリックで起動するSelenium自動化アプリ',
-        'CFBundleIdentifier': 'com.yourcompany.youappname',
+        'CFBundleName': 'SeleniumAutomation',
+        'CFBundleDisplayName': 'SeleniumAutomation',
+        'CFBundleGetInfoString': 'Selenium自動化アプリケーション',
+        'CFBundleIdentifier': 'com.selenium.automation',
         'CFBundleVersion': '1.0.0',
         'CFBundleShortVersionString': '1.0.0',
-        'NSHumanReadableCopyright': 'Copyright © 2024 YourCompany. All rights reserved.',
+        'NSHumanReadableCopyright': 'Copyright © 2024 All rights reserved.',
         'NSPrincipalClass': 'NSApplication',
-        'NSAppleScriptEnabled': False
-    },
-    'iconfile': 'icon.icns'
+        'NSAppleScriptEnabled': False,
+        # ユニバーサルバイナリの場合は両アーキテクチャをサポートすることを明示
+        'LSMinimumSystemVersion': '10.13.0',  # High Sierra以上をサポート
+        'LSArchitecturePriority': ['arm64', 'x86_64'] if is_universal else None
+    }
 }
+
+if is_universal:
+    print("⚠️ ユニバーサルバイナリ（Intel + Apple Silicon対応）としてビルドします")
+else:
+    print("⚠️ 単一アーキテクチャとしてビルドします（環境変数ARCHFLAGSが設定されていません）")
 
 setup(
     app=APP,
-    name='YourAppName',
+    name='SeleniumAutomation',
     data_files=DATA_FILES,
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],
