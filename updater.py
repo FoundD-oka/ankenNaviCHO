@@ -27,7 +27,7 @@ CURRENT_VERSION = "0.5.1"
 
 # GitHubリポジトリ情報
 GITHUB_REPO_OWNER = "FoundD-oka"
-GITHUB_REPO_NAME = "ankenNaviCHO"
+GITHUB_REPO_NAME = "Selenium"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/releases/latest"
 
 # バックアップディレクトリ
