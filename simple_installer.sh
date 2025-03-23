@@ -3,6 +3,11 @@
 # エラーが発生したら終了
 set -e
 
+# Anacondaのselenium環境を使用
+echo "Anacondaのselenium環境をアクティブにしています..."
+eval "$(conda shell.bash hook)"
+conda activate selenium
+
 # アプリケーション名
 APP_NAME="SeleniumAutomation"
 
@@ -362,38 +367,35 @@ class AppLauncher:
         logger.info(f"ブラウザでアプリケーションを開きます: {url}")
         webbrowser.open(url)
     
-    def _log_output(self, pipe, name):
-        """プロセスの出力をログに記録"""
-        for line in pipe:
-            logger.info(f"[{name}] {line.strip()}")
+    def _log_output(self, pipe, source):
+        """サブプロセスの出力をログに記録"""
+        for line in iter(pipe.readline, ''):
+            if line:
+                logger.info(f"[{source}] {line.rstrip()}")
+        
+        logger.info(f"{source} ストリームが終了しました")
     
     def _show_error_dialog(self, title, message):
         """エラーダイアログを表示"""
         try:
-            if platform.system() == 'Darwin':
-                # macOSの場合、osascriptを使用
-                script = f'''
-                tell application "System Events"
-                    display dialog "{message}" buttons {{"OK"}} default button "OK" with title "{title}" with icon stop
-                end tell
-                '''
-                subprocess.run(['osascript', '-e', script])
+            if platform.system() == "Darwin":  # macOS
+                subprocess.run([
+                    'osascript', '-e', 
+                    f'display dialog "{message}" with title "{title}" buttons {{"OK"}} with icon stop'
+                ])
             else:
-                # その他のプラットフォームの場合、標準出力にメッセージを出力
-                print(f"エラー: {title}\n{message}")
+                logger.warning(f"エラーダイアログ: {title} - {message}")
         except Exception as e:
-            logger.error(f"エラーダイアログの表示に失敗しました: {str(e)}")
-
+            logger.error(f"エラーダイアログの表示に失敗: {str(e)}")
+    
     def cleanup(self):
-        """アプリケーションのクリーンアップ"""
+        """リソースのクリーンアップ"""
         if self.app_process:
-            logger.info("アプリケーションを終了します...")
             try:
                 self.app_process.terminate()
-                self.app_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                self.app_process.kill()
-            logger.info("アプリケーションが終了しました")
+                logger.info("アプリケーションプロセスを終了しました")
+            except Exception as e:
+                logger.error(f"アプリケーションの終了中にエラーが発生しました: {str(e)}")
 
 def main():
     """メイン関数"""
@@ -417,6 +419,11 @@ cat > "$MACOS_DIR/run" << 'EOF'
 #!/bin/bash
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 RESOURCES_DIR="$SCRIPT_DIR/../Resources"
+
+# Anacondaのselenium環境を使用
+export PATH="$HOME/anaconda3/bin:$PATH"
+eval "$(conda shell.bash hook)"
+conda activate selenium
 
 cd "$RESOURCES_DIR"
 python3 app_launcher.py

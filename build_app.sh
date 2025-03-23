@@ -6,26 +6,53 @@ set -e
 # 古いビルドを削除
 echo "古いビルドを削除しています..."
 rm -rf build dist
-rm -rf "YourAppName.app"
+rm -rf *.app
 
 # 必要なパッケージをインストール
 echo "必要なパッケージをインストールしています..."
-pip install -r requirements.txt
-pip install py2app pillow
+pip install py2app pillow python-dotenv flask flask_bootstrap flask_login flask_wtf selenium supabase openai loguru semver
 
-# アイコンファイルが存在しない場合は作成
-if [ ! -f "icon.icns" ]; then
+# アイコンが存在しない場合は作成
+if [ ! -f icon.icns ]; then
     echo "アイコンを作成しています..."
     python create_icon.py
 fi
 
+# アプリケーションの実行スクリプトを作成
+cat > run_standalone.sh << 'EOF'
+#!/bin/bash
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+RESOURCES_DIR="$SCRIPT_DIR/../Resources"
+
+cd "$RESOURCES_DIR"
+./python app_launcher.py
+EOF
+
 # アプリケーションをビルド
-echo "アプリケーションをビルドしています..."
-python setup.py py2app
+echo "Py2Appでアプリケーションをビルドしています..."
+python setup.py py2app --packages=python_dotenv,flask,flask_bootstrap,flask_login,flask_wtf,selenium,supabase,openai,loguru,semver --includes=dotenv
 
-# 出来上がったアプリを適切な場所にコピー
-echo "アプリケーションをコピーしています..."
-cp -R "dist/YourAppName.app" .
+# 実行ファイルに実行権限を付与
+chmod +x dist/SeleniumAutomation.app/Contents/MacOS/run_standalone.sh
 
-echo "ビルドが完了しました！"
-echo "アプリケーション: $(pwd)/YourAppName.app" 
+# 独自の実行スクリプトを上書き
+cp run_standalone.sh dist/SeleniumAutomation.app/Contents/MacOS/run
+chmod +x dist/SeleniumAutomation.app/Contents/MacOS/run
+
+# 必要なディレクトリを作成
+mkdir -p dist/SeleniumAutomation.app/Contents/Resources/logs
+mkdir -p dist/SeleniumAutomation.app/Contents/Resources/crawled_data
+mkdir -p dist/SeleniumAutomation.app/Contents/Resources/backups
+touch dist/SeleniumAutomation.app/Contents/Resources/logs/app.log
+
+# ビルドしたアプリケーションをカレントディレクトリにコピー
+cp -r dist/SeleniumAutomation.app .
+
+echo "ビルドが完了しました: $(pwd)/SeleniumAutomation.app"
+
+# 確認
+echo "ビルドしたアプリケーションを実行しますか？(y/n)"
+read -n 1 -r
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    open "SeleniumAutomation.app"
+fi 
