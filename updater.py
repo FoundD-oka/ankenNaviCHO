@@ -23,7 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 現在のアプリバージョン
-CURRENT_VERSION = "0.4.3"
+CURRENT_VERSION = "0.5.1"
 
 # GitHubリポジトリ情報
 GITHUB_REPO_OWNER = "FoundD-oka"
