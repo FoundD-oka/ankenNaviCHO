@@ -6,3 +6,4 @@
 2025-03-18 22:18:52.472 | INFO     | bulk_apply:login_to_crowdworks:128 - ログイン処理を開始
 2025-03-18 22:19:01.672 | INFO     | bulk_apply:apply_to_job:205 - 案件への応募を開始: https://crowdworks.jp/public/jobs/11815828
 2025-03-18 22:19:12.655 | INFO     | bulk_apply:apply_to_job:205 - 案件への応募を開始: https://crowdworks.jp/public/jobs/11903019
+2025-03-24 02:23:19.389 | INFO     | bulk_apply:create_self_introduction:414 - デフォルトの自己紹介文を作成しました

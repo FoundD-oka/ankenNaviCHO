@@ -1,0 +1,87 @@
+2025-03-23 22:45:14,784 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-23 22:45:14,983 - app.util.chromedriver - ERROR - ChromeDriverのダウンロード中にエラー: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-23 22:45:14,985 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-23 22:45:14,986 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを開始しました
+2025-03-23 22:45:14,991 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを停止します
+2025-03-23 22:45:34,827 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-23 22:45:35,028 - app.util.chromedriver - ERROR - ChromeDriverのダウンロード中にエラー: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-23 22:45:35,030 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-23 22:45:35,030 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを開始しました
+2025-03-23 22:45:35,105 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを停止します
+2025-03-23 22:45:53,569 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-23 22:45:53,772 - app.util.chromedriver - ERROR - ChromeDriverのダウンロード中にエラー: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-23 22:45:53,774 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-23 22:45:53,774 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを開始しました
+2025-03-23 22:45:53,842 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを停止します
+2025-03-23 22:46:14,789 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-23 22:46:15,010 - app.util.chromedriver - ERROR - ChromeDriverのダウンロード中にエラー: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-23 22:46:15,012 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-23 22:46:15,012 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを開始しました
+2025-03-23 23:16:15,042 - app.util.chromedriver - INFO - バックグラウンドでChromeDriverの更新をチェックしています...
+2025-03-23 23:16:15,107 - app.util.chromedriver - INFO - バックグラウンド更新: Chromeのバージョンが変更されています（None → 134.0.6998.118）
+2025-03-24 00:55:31,579 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 00:55:31,801 - app.util.chromedriver - ERROR - ChromeDriverのダウンロード中にエラー: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 00:55:31,802 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-24 00:55:31,802 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを開始しました
+2025-03-24 00:55:31,812 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを停止します
+2025-03-24 00:56:01,860 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 00:56:02,063 - app.util.chromedriver - ERROR - ChromeDriverのダウンロード中にエラー: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 00:56:02,064 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-24 00:56:02,064 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを開始しました
+2025-03-24 00:56:02,739 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 00:56:02,935 - app.util.chromedriver - ERROR - ChromeDriverのダウンロード中にエラー: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 00:56:02,936 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-24 00:56:02,937 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを開始しました
+2025-03-24 01:03:33,962 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを停止します
+2025-03-24 01:03:34,098 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを停止します
+2025-03-24 01:05:07,265 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:05:07,473 - app.util.chromedriver - ERROR - ChromeDriverのダウンロード中にエラー: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:05:07,474 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-24 01:05:07,475 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを開始しました
+2025-03-24 01:05:08,247 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:05:08,448 - app.util.chromedriver - ERROR - ChromeDriverのダウンロード中にエラー: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:05:08,449 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-24 01:05:08,450 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを開始しました
+2025-03-24 01:07:33,599 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを停止します
+2025-03-24 01:07:33,729 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを停止します
+2025-03-24 01:08:08,162 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:08:08,372 - app.util.chromedriver - ERROR - ChromeDriverのダウンロード中にエラー: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:08:08,373 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-24 01:08:08,373 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを開始しました
+2025-03-24 01:08:08,995 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:08:09,191 - app.util.chromedriver - ERROR - ChromeDriverのダウンロード中にエラー: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:08:09,192 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-24 01:08:09,192 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを開始しました
+2025-03-24 01:11:43,046 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:11:43,248 - app.util.chromedriver - ERROR - ChromeDriverのダウンロード中にエラー: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:11:43,250 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-24 01:11:43,250 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを開始しました
+2025-03-24 01:11:44,033 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:11:44,231 - app.util.chromedriver - ERROR - ChromeDriverのダウンロード中にエラー: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:11:44,232 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-24 01:11:44,233 - app.util.chromedriver - INFO - ChromeDriverのバックグラウンド更新スレッドを開始しました
+2025-03-24 01:19:33,708 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:19:33,911 - app.util.chromedriver - ERROR - ChromeDriverのダウンロードURLが見つかりません: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:19:33,911 - app.util.chromedriver - INFO - 代替URLを試行: https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:19:34,273 - app.util.chromedriver - ERROR - 代替URLからのダウンロードも失敗: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:19:34,276 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-24 01:19:56,327 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:19:56,524 - app.util.chromedriver - ERROR - ChromeDriverのダウンロードURLが見つかりません: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:19:56,524 - app.util.chromedriver - INFO - 代替URLを試行: https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:19:56,907 - app.util.chromedriver - ERROR - 代替URLからのダウンロードも失敗: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:19:56,911 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-24 01:19:57,557 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:19:57,758 - app.util.chromedriver - ERROR - ChromeDriverのダウンロードURLが見つかりません: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:19:57,759 - app.util.chromedriver - INFO - 代替URLを試行: https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:19:58,118 - app.util.chromedriver - ERROR - 代替URLからのダウンロードも失敗: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:19:58,122 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-24 01:29:52,361 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:29:52,571 - app.util.chromedriver - ERROR - ChromeDriverのダウンロードURLが見つかりません: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:29:52,572 - app.util.chromedriver - INFO - 代替URLを試行: https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:29:53,168 - app.util.chromedriver - ERROR - 代替URLからのダウンロードも失敗: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:29:53,172 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
+2025-03-24 01:29:53,850 - app.util.chromedriver - INFO - ChromeDriver 134.0.6998.165 をダウンロード中: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:29:54,050 - app.util.chromedriver - ERROR - ChromeDriverのダウンロードURLが見つかりません: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:29:54,050 - app.util.chromedriver - INFO - 代替URLを試行: https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:29:54,521 - app.util.chromedriver - ERROR - 代替URLからのダウンロードも失敗: 404 Client Error: Not Found for url: https://storage.googleapis.com/chrome-for-testing-public/134.0.6998.165/chromedriver-mac-arm64.zip
+2025-03-24 01:29:54,524 - app.util.chromedriver - ERROR - ChromeDriver 134.0.6998.165 のダウンロードに失敗しました
