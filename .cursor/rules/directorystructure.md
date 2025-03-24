@@ -1,52 +1,52 @@
 # ディレクトリ構成
 
-以下のディレクトリ構造に従って実装を行ってください：
+以下はプロジェクトの現在のディレクトリ構造です：
 
 ```
-selenium-project/
-├── app/                   # アプリケーションのコアパッケージ
-│   ├── __init__.py        # アプリケーション初期化
-│   ├── routes/            # ルーティング処理
-│   │   ├── __init__.py
-│   │   ├── main.py        # メインページのルート
-│   │   ├── auth.py        # 認証関連のルート
-│   │   ├── api.py         # API関連のルート
-│   │   └── job.py         # 案件管理のルート
-│   ├── models/            # データモデル
-│   │   ├── __init__.py
-│   │   └── user.py        # ユーザーモデル
-│   ├── services/          # ビジネスロジック
-│   │   ├── __init__.py
-│   │   ├── crawler.py     # クローリングサービス
-│   │   ├── filter.py      # フィルタリングサービス
-│   │   ├── bulk_apply.py  # 一括応募サービス
-│   │   └── updater.py     # アップデートサービス
-│   ├── util/              # ユーティリティ関数
-│   │   ├── __init__.py
-│   │   ├── logging.py     # ロギング設定
-│   │   ├── auth.py        # 認証ユーティリティ
-│   │   └── chromedriver.py # ChromeDriver管理
-│   ├── static/            # 静的ファイル
-│   └── templates/         # HTMLテンプレート
-├── config/                # 設定ファイル
-│   ├── __init__.py
-│   ├── default.py         # デフォルト設定
-│   ├── development.py     # 開発環境設定
-│   └── production.py      # 本番環境設定
-├── data/                  # データ保存ディレクトリ
-│   ├── settings.json      # アプリケーション設定
-│   └── jobs/              # 案件データ
-├── logs/                  # ログファイル
-├── tests/                 # テストコード
-│   ├── __init__.py
-│   ├── test_crawler.py
-│   └── test_filter.py
-├── packaging/             # パッケージング
-│   ├── macos/             # macOS用
-│   └── windows/           # Windows用
-├── docs/                  # ドキュメント
-├── run.py                 # 開発用起動スクリプト
-├── wsgi.py                # 本番用WSGI起動スクリプト  
-├── .env.example           # 環境変数サンプル
-├── .gitignore             # Gitの無視設定
-└── requirements.txt       # 依存パッケージリスト
+Selenium/
+├── app/                         # アプリケーションのコアパッケージ
+│   ├── config/                  # アプリケーション設定
+│   ├── models/                  # データモデル
+│   ├── repositories/            # データアクセス層
+│   ├── routes/                  # ルーティング処理
+│   ├── services/                # ビジネスロジック
+│   │   ├── crawler.py           # クローリングサービス
+│   │   ├── filter.py            # フィルタリングサービス
+│   │   ├── bulk_apply.py        # 一括応募サービス
+│   │   └── updater.py           # アップデートサービス
+│   ├── static/                  # 静的ファイル
+│   ├── templates/               # HTMLテンプレート
+│   └── util/                    # ユーティリティ関数
+│       ├── logging.py           # ロギング設定
+│       ├── auth.py              # 認証ユーティリティ
+│       └── chromedriver.py      # ChromeDriver管理
+├── backups/                     # バックアップファイル
+├── config/                      # グローバル設定ファイル
+├── crawled_data/                # クロール済みデータ
+├── data/                        # データ保存ディレクトリ
+│   ├── settings.json            # アプリケーション設定
+│   └── jobs/                    # 案件データ
+├── Docs/                        # ドキュメント
+├── drivers/                     # WebDrivers
+├── logs/                        # ログファイル
+├── templates/                   # 外部テンプレート
+├── venv/                        # 仮想環境
+├── app.py                       # メインアプリケーション
+├── app_launcher.py              # アプリケーション起動スクリプト
+├── bulk_apply.py                # 一括応募スクリプト
+├── build_app.sh                 # アプリケーションビルドスクリプト
+├── chromedriver                 # ChromeDriverバイナリ
+├── chromedriver_manager.py      # ChromeDriver管理スクリプト
+├── crawler.py                   # クローラースクリプト
+├── create_icon.py               # アイコン作成スクリプト
+├── icon.icns                    # アプリケーションアイコン
+├── install_standalone.sh        # スタンドアロンインストーラースクリプト
+├── requirements.txt             # 依存パッケージリスト
+├── run_standalone.sh            # スタンドアロン実行スクリプト
+├── setup.py                     # セットアップスクリプト
+├── simple_installer.sh          # シンプルインストーラースクリプト
+├── standalone_app.py            # スタンドアロンアプリケーション
+├── supabase_stripe_handler.py   # Supabase/Stripe連携処理
+├── updater.py                   # アップデータースクリプト
+├── .env                         # 環境変数設定
+└── .gitignore                   # Gitの無視設定

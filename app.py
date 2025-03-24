@@ -475,12 +475,12 @@ PROMPT_FILE = 'prompt.txt'
 
 # デフォルト設定
 DEFAULT_SETTINGS = {
-    'model': 'gpt-4o-mini',
-    'max_items': 50,
+    'model': 'gpt-4o',
     'api_key': '',
     'deepseek_api_key': '',
-    'deepseek_model': 'deepseek-chat',
+    'max_items': 50,
     'filter_prompt': '',
+    'self_introduction': '',
     'crowdworks_email': '',
     'crowdworks_password': '',
     'coconala_email': '',
@@ -519,6 +519,18 @@ def load_settings():
         with open(PROMPT_FILE, 'r', encoding='utf-8') as f:
             prompt_config = json.load(f)
             settings['filter_prompt'] = prompt_config.get('prompt', '')
+    
+    # SelfIntroduction.txtから自己紹介文を読み込み
+    if os.path.exists('SelfIntroduction.txt'):
+        try:
+            with open('SelfIntroduction.txt', 'r', encoding='utf-8') as f:
+                settings['self_introduction'] = f.read()
+        except Exception as e:
+            logger.error(f"自己紹介文の読み込みに失敗: {str(e)}")
+            settings['self_introduction'] = ''
+    else:
+        # SelfIntroduction.txtがない場合はデフォルトの自己紹介文を設定
+        settings['self_introduction'] = ''
     
     return settings
 
@@ -682,6 +694,15 @@ def update_settings():
                 settings['deepseek_api_key'] = data['deepseek_api_key']
             if 'filter_prompt' in data:
                 settings['filter_prompt'] = data['filter_prompt']
+            if 'self_introduction' in data:
+                settings['self_introduction'] = data['self_introduction']
+                # SelfIntroduction.txtファイルに保存
+                try:
+                    with open('SelfIntroduction.txt', 'w', encoding='utf-8') as f:
+                        f.write(data['self_introduction'])
+                except Exception as e:
+                    logger.error(f"自己紹介文の保存に失敗: {str(e)}")
+                    return jsonify({'status': 'error', 'message': '自己紹介文の保存に失敗しました'}), 500
             
             # サービス認証情報の更新
             if 'crowdworks_email' in data:
