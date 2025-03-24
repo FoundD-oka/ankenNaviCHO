@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SeleniumAutomation スタンドアロンランチャー
+ankenNaviCHO スタンドアロンランチャー
 conda環境に依存しない実行モジュール
 """
 import os
@@ -13,7 +13,7 @@ def main():
     """
     アプリケーションのメインエントリーポイント
     """
-    print("SeleniumAutomation スタンドアロンランチャーを起動しています...")
+    print("ankenNaviCHO スタンドアロンランチャーを起動しています...")
     
     # 必要なパッケージをインストール
     required_packages = [

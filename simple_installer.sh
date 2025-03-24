@@ -9,7 +9,7 @@ eval "$(conda shell.bash hook)"
 conda activate selenium
 
 # アプリケーション名
-APP_NAME="SeleniumAutomation"
+APP_NAME="ankenNaviCHO"
 
 # アプリケーションのインストール先
 INSTALL_DIR="$HOME/Applications/$APP_NAME.app"
@@ -443,7 +443,7 @@ cat > "$CONTENTS_DIR/Info.plist" << EOF
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.yourcompany.$APP_NAME</string>
+    <string>com.anken.navicho</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

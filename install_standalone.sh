@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
 
-echo "スタンドアロン版 SeleniumAutomation インストーラー"
+echo "スタンドアロン版 ankenNaviCHO インストーラー"
 echo "------------------------------------------------"
 
 # インストール先ディレクトリ
-INSTALL_DIR="$HOME/Applications/SeleniumAutomation.app"
+INSTALL_DIR="$HOME/Applications/ankenNaviCHO.app"
 RESOURCES_DIR="$INSTALL_DIR/Contents/Resources"
 MACOS_DIR="$INSTALL_DIR/Contents/MacOS"
 
@@ -40,17 +40,17 @@ cat > "$INSTALL_DIR/Contents/Info.plist" << 'EOF'
     <key>CFBundleDevelopmentRegion</key>
     <string>English</string>
     <key>CFBundleDisplayName</key>
-    <string>SeleniumAutomation</string>
+    <string>ankenNaviCHO</string>
     <key>CFBundleExecutable</key>
     <string>run</string>
     <key>CFBundleIconFile</key>
     <string>icon.icns</string>
     <key>CFBundleIdentifier</key>
-    <string>com.selenium.automation</string>
+    <string>com.anken.navicho</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>SeleniumAutomation</string>
+    <string>ankenNaviCHO</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -107,7 +107,7 @@ EOF
 cat > "$RESOURCES_DIR/standalone_app.py" << 'EOF'
 #!/usr/bin/env python3
 """
-SeleniumAutomation スタンドアロンランチャー
+ankenNaviCHO スタンドアロンランチャー
 conda環境に依存しない実行モジュール
 """
 import os
@@ -124,7 +124,7 @@ def main():
     """
     アプリケーションのメインエントリーポイント
     """
-    print("SeleniumAutomation スタンドアロンランチャーを起動しています...")
+    print("ankenNaviCHO スタンドアロンランチャーを起動しています...")
     
     # 必要なディレクトリを作成
     os.makedirs(os.path.join(script_dir, "logs"), exist_ok=True)

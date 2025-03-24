@@ -33,26 +33,26 @@ echo "Py2Appでアプリケーションをビルドしています..."
 python setup.py py2app --packages=python_dotenv,flask,flask_bootstrap,flask_login,flask_wtf,selenium,supabase,openai,loguru,semver --includes=dotenv
 
 # 実行ファイルに実行権限を付与
-chmod +x dist/SeleniumAutomation.app/Contents/MacOS/run_standalone.sh
+chmod +x dist/ankenNaviCHO.app/Contents/MacOS/run_standalone.sh
 
 # 独自の実行スクリプトを上書き
-cp run_standalone.sh dist/SeleniumAutomation.app/Contents/MacOS/run
-chmod +x dist/SeleniumAutomation.app/Contents/MacOS/run
+cp run_standalone.sh dist/ankenNaviCHO.app/Contents/MacOS/run
+chmod +x dist/ankenNaviCHO.app/Contents/MacOS/run
 
 # 必要なディレクトリを作成
-mkdir -p dist/SeleniumAutomation.app/Contents/Resources/logs
-mkdir -p dist/SeleniumAutomation.app/Contents/Resources/crawled_data
-mkdir -p dist/SeleniumAutomation.app/Contents/Resources/backups
-touch dist/SeleniumAutomation.app/Contents/Resources/logs/app.log
+mkdir -p dist/ankenNaviCHO.app/Contents/Resources/logs
+mkdir -p dist/ankenNaviCHO.app/Contents/Resources/crawled_data
+mkdir -p dist/ankenNaviCHO.app/Contents/Resources/backups
+touch dist/ankenNaviCHO.app/Contents/Resources/logs/app.log
 
 # ビルドしたアプリケーションをカレントディレクトリにコピー
-cp -r dist/SeleniumAutomation.app .
+cp -r dist/ankenNaviCHO.app .
 
-echo "ビルドが完了しました: $(pwd)/SeleniumAutomation.app"
+echo "ビルドが完了しました: $(pwd)/ankenNaviCHO.app"
 
 # 確認
 echo "ビルドしたアプリケーションを実行しますか？(y/n)"
 read -n 1 -r
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    open "SeleniumAutomation.app"
+    open "ankenNaviCHO.app"
 fi 
