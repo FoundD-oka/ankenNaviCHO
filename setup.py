@@ -4,7 +4,7 @@ from setuptools import setup
 APP = ['app_launcher.py']
 DATA_FILES = [
     'templates',
-    'static',
+    'app/static',
     'drivers',
     '.env',
     'chromedriver',
@@ -52,7 +52,7 @@ OPTIONS = {
         'traceback',
         'shutil'
     ],
-    'excludes': ['tkinter', 'PyQt5', 'PyQt6', 'PySide2', 'PySide6'],
+    'excludes': ['tkinter', 'PyQt5', 'PyQt6', 'PySide2', 'PySide6', 'PIL', 'PyInstaller'],
     'iconfile': 'icon.icns',
     'plist': {
         'CFBundleName': 'ankenNaviCHO',
@@ -64,7 +64,8 @@ OPTIONS = {
         'NSHumanReadableCopyright': 'Copyright © 2024 All rights reserved.',
         'NSPrincipalClass': 'NSApplication',
         'NSAppleScriptEnabled': False
-    }
+    },
+    'recipe_append': ['py2app.recipes.no_PIL']
 }
 
 setup(
