@@ -10,3 +10,28 @@
 *.pyo
 *.pyd
 .DS_Store
+
+# ビルド関連
+/build/
+/dist/
+# アプリディレクトリ
+app/**/__pycache__/
+/data/
+
+# キャッシュファイル
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE関連
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# その他
+*.log
+*.bak
+*.tmp

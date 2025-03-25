@@ -15,11 +15,15 @@ Selenium/
 │   │   ├── bulk_apply.py        # 一括応募サービス
 │   │   └── updater.py           # アップデートサービス
 │   ├── static/                  # 静的ファイル
+│   │   └── css/                 # CSSファイル
+│   │   └── js/                  # JavaScriptファイル
 │   ├── templates/               # HTMLテンプレート
+│   │   ├── filter/              # フィルタリングテンプレート
+│   │   └── layout/              # レイアウトテンプレート
 │   └── util/                    # ユーティリティ関数
 │       ├── logging.py           # ロギング設定
 │       ├── auth.py              # 認証ユーティリティ
-│       └── chromedriver.py      # ChromeDriver管理
+│       └── chromedriver_manager.py # ChromeDriver管理
 ├── backups/                     # バックアップファイル
 ├── config/                      # グローバル設定ファイル
 ├── crawled_data/                # クロール済みデータ
@@ -28,9 +32,13 @@ Selenium/
 │   └── jobs/                    # 案件データ
 ├── Docs/                        # ドキュメント
 ├── drivers/                     # WebDrivers
+│   └── config.json              # WebDriver設定
 ├── logs/                        # ログファイル
 ├── templates/                   # 外部テンプレート
-├── venv/                        # 仮想環境
+│   ├── error.html               # エラーページ
+│   ├── index.html               # インデックスページ
+│   ├── job_history.html         # ジョブ履歴ページ
+│   └── login.html               # ログインページ
 ├── app.py                       # メインアプリケーション
 ├── app_launcher.py              # アプリケーション起動スクリプト
 ├── bulk_apply.py                # 一括応募スクリプト
@@ -39,14 +47,10 @@ Selenium/
 ├── chromedriver_manager.py      # ChromeDriver管理スクリプト
 ├── crawler.py                   # クローラースクリプト
 ├── create_icon.py               # アイコン作成スクリプト
+├── env.txt                      # 環境変数設定
 ├── icon.icns                    # アプリケーションアイコン
-├── install_standalone.sh        # スタンドアロンインストーラースクリプト
 ├── requirements.txt             # 依存パッケージリスト
-├── run_standalone.sh            # スタンドアロン実行スクリプト
+├── SelfIntroduction.txt         # 自己紹介テキスト
 ├── setup.py                     # セットアップスクリプト
-├── simple_installer.sh          # シンプルインストーラースクリプト
-├── standalone_app.py            # スタンドアロンアプリケーション
 ├── supabase_stripe_handler.py   # Supabase/Stripe連携処理
-├── updater.py                   # アップデータースクリプト
-├── .env                         # 環境変数設定
 └── .gitignore                   # Gitの無視設定
