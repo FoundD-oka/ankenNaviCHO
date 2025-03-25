@@ -31,7 +31,7 @@ EOF
 
 # アプリケーションをビルド
 echo "Py2Appでアプリケーションをビルドしています..."
-python setup.py py2app --packages=python_dotenv,flask,flask_bootstrap,flask_login,flask_wtf,selenium,supabase,openai,loguru,semver,pydantic,pydantic_core --includes=dotenv
+python setup.py py2app --packages=python_dotenv,flask,flask_bootstrap,flask_login,flask_wtf,selenium,supabase,openai,loguru,semver,pydantic,pydantic_core,pandas,bs4,numpy,requests,apscheduler,zipfile36 --includes=dotenv
 
 # 実行ファイルに実行権限を付与
 chmod +x dist/ankenNaviCHO.app/Contents/MacOS/run_standalone.sh

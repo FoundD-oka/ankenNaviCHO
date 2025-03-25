@@ -38,7 +38,9 @@ OPTIONS = {
         'jinja2',
         'werkzeug',
         'wtforms',
-        'itsdangerous'
+        'itsdangerous',
+        'openai',
+        'numpy'
     ],
     'includes': [
         'queue',
