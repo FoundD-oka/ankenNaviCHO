@@ -10,7 +10,8 @@ rm -rf *.app
 
 # 必要なパッケージをインストール
 echo "必要なパッケージをインストールしています..."
-pip install py2app pillow python-dotenv flask flask_bootstrap flask_login flask_wtf selenium supabase openai loguru semver
+pip install -r requirements.txt
+pip install py2app pillow
 
 # アイコンが存在しない場合は作成
 if [ ! -f icon.icns ]; then
@@ -30,7 +31,7 @@ EOF
 
 # アプリケーションをビルド
 echo "Py2Appでアプリケーションをビルドしています..."
-python setup.py py2app --packages=python_dotenv,flask,flask_bootstrap,flask_login,flask_wtf,selenium,supabase,openai,loguru,semver --includes=dotenv
+python setup.py py2app --packages=python_dotenv,flask,flask_bootstrap,flask_login,flask_wtf,selenium,supabase,openai,loguru,semver,pydantic,pydantic_core --includes=dotenv
 
 # 実行ファイルに実行権限を付与
 chmod +x dist/ankenNaviCHO.app/Contents/MacOS/run_standalone.sh
