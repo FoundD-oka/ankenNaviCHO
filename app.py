@@ -1264,6 +1264,59 @@ def update_status_api():
     except Exception as e:
         return handle_error(e, "ステータス取得エラー", "更新状態の取得中にエラーが発生しました。")
 
+# 案件詳細取得エンドポイント
+@app.route('/api/job_details', methods=['GET'])
+@auth_required
+def get_job_details_api():
+    """
+    指定されたURLの案件詳細を取得するAPI
+    """
+    try:
+        # URLパラメータを取得
+        job_url = request.args.get('url')
+        if not job_url:
+            return jsonify({
+                'success': False,
+                'message': '案件URLが指定されていません'
+            }), 400
+        
+        # 全ての案件データをチェック
+        all_jobs = []
+        json_files = glob.glob('crawled_data/*_filtered.json')
+        
+        for file_path in json_files:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    jobs = json.load(f)
+                    all_jobs.extend(jobs)
+            except Exception as e:
+                logger.error(f"ファイル {file_path} の読み込み中にエラー: {str(e)}")
+                continue
+        
+        # URLに一致する案件を探す
+        for job in all_jobs:
+            if job.get('url') == job_url:
+                # 詳細情報の整形
+                if 'detail_description' in job:
+                    job['detail_description'] = job['detail_description'].replace('\n', '<br>')
+                return jsonify({
+                    'success': True,
+                    'job': job
+                })
+        
+        # 案件が見つからない場合
+        return jsonify({
+            'success': False,
+            'message': '指定されたURLの案件が見つかりません'
+        }), 404
+        
+    except Exception as e:
+        logger.error(f"案件詳細の取得中にエラー: {str(e)}\n{traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'message': f'案件詳細の取得中にエラーが発生しました: {str(e)}'
+        }), 500
+
 # ChromeDriverの状態を確認するAPIエンドポイントを追加
 @app.route('/api/chromedriver/status', methods=['GET'])
 @auth_required
