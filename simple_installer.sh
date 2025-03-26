@@ -11,14 +11,14 @@ conda activate selenium
 # アプリケーション名
 APP_NAME="ankenNaviCHO"
 
-# アプリケーションのインストール先
-INSTALL_DIR="$HOME/Applications/$APP_NAME.app"
+# カレントディレクトリを取得
+CURRENT_DIR=$(pwd)
+
+# アプリケーションのインストール先をカレントディレクトリに変更
+INSTALL_DIR="$CURRENT_DIR/$APP_NAME.app"
 CONTENTS_DIR="$INSTALL_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
-
-# カレントディレクトリを取得
-CURRENT_DIR=$(pwd)
 
 # カラー表示の設定
 RED='\033[0;31m'
@@ -182,8 +182,16 @@ class AppLauncher:
             # フォルダ構造の確認と作成
             self._ensure_directories()
             
-            # ChromeDriverの設定確認
-            self._setup_chromedriver()
+            # 既存のChromeDriverを使用する場合はセットアップをスキップ
+            driver_path = os.path.join(self.bundle_dir, 'chromedriver')
+            if os.path.exists(driver_path):
+                logger.info(f"既存のChromeDriverを使用します: {driver_path}")
+                os.environ['SELENIUM_DRIVER_PATH'] = driver_path
+                # .envファイルにパスを設定
+                set_key(self.env_file, 'SELENIUM_DRIVER_PATH', driver_path)
+            else:
+                # ChromeDriverの設定確認
+                self._setup_chromedriver()
             
             logger.info("環境の初期化が完了しました")
         except Exception as e:
@@ -326,8 +334,8 @@ class AppLauncher:
                 text=True
             )
             
-            # サーバー起動を待機
-            self._wait_for_server(port)
+            # サーバー起動を待機（タイムアウト時間を短縮）
+            self._wait_for_server(port, timeout=15)
             
             # ブラウザでアプリケーションを開く
             self._open_browser(port)
@@ -347,8 +355,8 @@ class AppLauncher:
                 self.app_process.terminate()
             sys.exit(1)
     
-    def _wait_for_server(self, port, timeout=30):
-        """サーバーが起動するのを待機"""
+    def _wait_for_server(self, port, timeout=15):
+        """サーバーが起動するのを待機（タイムアウト時間を短縮）"""
         logger.info(f"サーバーの起動を待機しています（ポート: {port}）...")
         for _ in range(timeout):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -359,7 +367,9 @@ class AppLauncher:
                 return True
             time.sleep(1)
         
-        raise Exception(f"サーバーの起動がタイムアウトしました（ポート: {port}）")
+        # タイムアウトしても続行
+        logger.warning(f"サーバーの起動を待機中にタイムアウトしました（ポート: {port}）。続行します。")
+        return False
     
     def _open_browser(self, port):
         """ブラウザでアプリケーションを開く"""
@@ -464,7 +474,7 @@ cat > "$CONTENTS_DIR/Info.plist" << EOF
 </plist>
 EOF
 
-# シンボリックリンクを作成（任意）
+# アプリケーションへのシンボリックリンクを作成（任意）
 ln -sf "$INSTALL_DIR" "/Applications/$APP_NAME.app"
 
 echo -e "${GREEN}インストールが完了しました！${NC}"
@@ -472,7 +482,8 @@ echo -e "アプリケーションは以下の場所にインストールされ�
 echo -e "${BLUE}$INSTALL_DIR${NC}"
 
 echo -e "\n${GREEN}アプリケーションの起動方法:${NC}"
-echo -e "Finderから ${BLUE}/Applications/$APP_NAME.app${NC} をダブルクリックします。"
+echo -e "Finderから ${BLUE}$INSTALL_DIR${NC} をダブルクリックします。"
+echo -e "または ${BLUE}/Applications/$APP_NAME.app${NC} からも起動できます。"
 
 echo -e "\n${GREEN}ログファイルの場所:${NC}"
 echo -e "${BLUE}$RESOURCES_DIR/logs/${NC}"
@@ -487,5 +498,5 @@ read -p "アプリケーションを今すぐ起動しますか？ (y/n): " -n 1
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "アプリケーションを起動しています..."
-    open -a "/Applications/$APP_NAME.app"
+    open "$INSTALL_DIR"
 fi 

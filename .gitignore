@@ -15,8 +15,8 @@
 /build/
 /dist/
 # アプリディレクトリ
-app/**/__pycache__/
-/data/
+/ankenNaviCHO.app/
+/ankenNaviCHO.exe/
 
 # キャッシュファイル
 __pycache__/
