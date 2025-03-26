@@ -68,24 +68,38 @@ DEFAULT_CONFIG = {
     "response_format": { "type": "json_object" }
 }
 
-# プロンプトと設定を読み込む関数
+# フィルタリング設定を読み込む関数
 def load_config():
+    """
+    フィルタリング設定をprompt.txtから読み込む
+    存在しない場合は設定ファイルから読み込み、
+    それも存在しない場合はデフォルト設定を返す
+    """
     try:
-        with open(PROMPT_FILE, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-            # 必要なキーがすべて存在することを確認
-            required_keys = ["model", "prompt", "temperature", "max_tokens"]
-            if all(key in config for key in required_keys):
-                # response_formatを追加
-                config["response_format"] = { "type": "json_object" }
-                # モデル名をそのまま使用（マッピング不要）
-                return config
-            else:
-                print("Warning: Missing required keys in prompt.txt")
-                return DEFAULT_CONFIG
+        # まずprompt.txtを試す
+        if os.path.exists('prompt.txt'):
+            with open('prompt.txt', 'r', encoding='utf-8') as f:
+                return json.load(f)
+        
+        # 次に設定ファイルから読み込む
+        settings = load_settings()
+        
+        # 設定ファイルからフィルター設定を構築
+        return {
+            'model': settings.get('model', 'gpt-4o-mini'),
+            'prompt': settings.get('filter_prompt', 'プログラミングやWebデザイン、データ分析の案件で、単価が高く、作業内容が明確なもの'),
+            'temperature': 0,
+            'max_tokens': 100
+        }
     except Exception as e:
-        print(f"Error loading config: {e}")
-        return DEFAULT_CONFIG
+        logger.error(f"フィルタリング設定の読み込みに失敗: {str(e)}")
+        # デフォルト設定を返す
+        return {
+            'model': 'gpt-4o-mini',
+            'prompt': 'プログラミングやWebデザイン、データ分析の案件で、単価が高く、作業内容が明確なもの',
+            'temperature': 0,
+            'max_tokens': 100
+        }
 
 # GPTによる案件フィルタリング
 def filter_jobs_by_gpt(jobs, config):
@@ -312,7 +326,13 @@ class CrowdWorksCrawler:
                     return result;
                 """)
                 
-                if not form_elements.get('email') or not form_elements.get('password'):
+                # フォーム要素の検証結果をログに記録
+                email_found = form_elements.get('email') is not None
+                password_found = form_elements.get('password') is not None
+                submit_found = form_elements.get('submit') is not None
+                logger.info(f"フォーム要素の検出状況: email={email_found}, password={password_found}, submit={submit_found}")
+                
+                if not email_found or not password_found:
                     logger.error("ログインフォームの要素が見つかりません")
                     # ページソースを保存して調査
                     with open("error_page.html", "w", encoding="utf-8") as f:
@@ -321,6 +341,11 @@ class CrowdWorksCrawler:
                     return False
                 
                 logger.info("ログインフォームの要素を発見")
+
+                # 認証情報の検証
+                if not self.email or not self.password:
+                    logger.error(f"認証情報が不足しています: email={bool(self.email)}, password={bool(self.password)}")
+                    return False
 
                 # JavaScriptを使用して入力
                 self.driver.execute_script("""
@@ -337,8 +362,8 @@ class CrowdWorksCrawler:
                 """, form_elements['password'], self.password)
                 time.sleep(1)  # sleepをtime.sleepに修正
 
-                if not form_elements.get('submit'):
-                    logger.error("ログインボタンが見つかりません")
+                if not submit_found:
+                    logger.error("ログインボタンが見つかりません。フォームを直接送信します")
                     # フォーム自体を送信
                     self.driver.execute_script("""
                         document.querySelector('form').submit();
@@ -353,12 +378,30 @@ class CrowdWorksCrawler:
                 time.sleep(5)  # sleepをtime.sleepに修正
 
                 # ログイン成功の確認（URLが変わったことを確認）
-                logger.info(f"ログイン後のURL: {self.driver.current_url}")
-                if "/login" not in self.driver.current_url:
+                current_url = self.driver.current_url
+                logger.info(f"ログイン後のURL: {current_url}")
+                
+                # エラーメッセージの確認
+                error_messages = self.driver.execute_script("""
+                    const errors = document.querySelectorAll('.alert-danger, .error-message');
+                    return Array.from(errors).map(el => el.innerText);
+                """)
+                
+                if error_messages and len(error_messages) > 0:
+                    logger.error(f"ログインエラーメッセージを検出: {error_messages}")
+                    return False
+                
+                if "/login" not in current_url:
                     logger.info("ログイン成功")
                     return True
                 else:
                     logger.error("ログイン失敗: ログインページから移動できません")
+                    
+                    # ページソースを保存して調査
+                    with open("login_failure_page.html", "w", encoding="utf-8") as f:
+                        f.write(self.driver.page_source)
+                    logger.info("ログイン失敗時のページソースを'login_failure_page.html'に保存しました")
+                    
                     return False
             except Exception as e:
                 logger.error(f"ログインフォームの操作に失敗: {str(e)}")
@@ -598,15 +641,40 @@ class CrowdWorksCrawler:
             self.logger.info("クローラーを終了します")
 
 if __name__ == "__main__":
-    # 設定を読み込み
-    settings = load_settings()
-    email = settings.get('crowdworks_email')
-    password = settings.get('crowdworks_password')
-    
-    if not email or not password:
-        logger.error("CrowdWorksのメールアドレスまたはパスワードが設定されていません")
+    try:
+        # 設定を読み込み
+        settings = load_settings()
+        email = settings.get('crowdworks_email')
+        password = settings.get('crowdworks_password')
+        
+        if not email or not password:
+            logger.error("CrowdWorksのメールアドレスまたはパスワードが設定されていません")
+            print("エラー: CrowdWorksのメールアドレスまたはパスワードが設定されていません")
+            sys.exit(1)
+        
+        logger.info(f"認証情報: email={bool(email)}, password={bool(password)}")
+        
+        # crawled_dataディレクトリの存在確認
+        if not os.path.exists('crawled_data'):
+            logger.info("crawled_dataディレクトリが存在しないため作成します")
+            os.makedirs('crawled_data')
+        
+        # クローラーを実行
+        logger.info("クローラーを初期化しています...")
+        crawler = CrowdWorksCrawler(email, password)
+        
+        logger.info("クローラーの実行を開始します")
+        crawler.run()
+        
+        # 正常終了
+        logger.info("クローラーが正常に終了しました")
+        sys.exit(0)
+    except Exception as e:
+        # 予期しないエラーを記録
+        error_msg = f"クローラー実行中に予期しないエラーが発生しました: {str(e)}"
+        logger.error(error_msg)
+        print(f"エラー: {error_msg}")
+        # トレースバックを記録
+        import traceback
+        logger.error(traceback.format_exc())
         sys.exit(1)
-    
-    # クローラーを実行
-    crawler = CrowdWorksCrawler(email, password)
-    crawler.run()

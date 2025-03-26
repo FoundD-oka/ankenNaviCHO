@@ -524,6 +524,9 @@
     <!-- Page Content -->
     <div id="content">
         <div class="container-fluid">
+            <!-- CSRF Token hidden field -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
@@ -1362,69 +1365,127 @@
         
         // 案件テーブルを更新する関数
         function updateJobsTable(jobs) {
-            const tableBody = document.querySelector('#jobs-table tbody');
-            if (!tableBody) return;
-            
-            // テーブルをクリア
-            tableBody.innerHTML = '';
-            
-            // 案件データを追加
-            jobs.forEach(job => {
-                const row = document.createElement('tr');
+            try {
+                console.log('案件テーブルを更新します:', jobs);
                 
-                // チェックボックス
-                const checkCell = document.createElement('td');
-                checkCell.className = 'check-column';
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'job-check';
-                checkbox.value = job.url;
-                checkCell.appendChild(checkbox);
-                row.appendChild(checkCell);
+                const tableBody = document.querySelector('table.table-striped tbody');
+                if (!tableBody) {
+                    console.error('案件テーブルが見つかりません');
+                    showToast('テーブルの更新に失敗しました: テーブルが見つかりません', 'error');
+                    return;
+                }
                 
-                // タイトル
-                const titleCell = document.createElement('td');
-                titleCell.className = 'title-column';
-                const titleLink = document.createElement('a');
-                titleLink.href = job.url;
-                titleLink.target = '_blank';
-                titleLink.textContent = job.title;
-                titleCell.appendChild(titleLink);
+                // テーブルをクリア
+                tableBody.innerHTML = '';
                 
-                // 詳細ボタン
-                const detailsBtn = document.createElement('button');
-                detailsBtn.className = 'toggle-details';
-                detailsBtn.textContent = '詳細';
-                detailsBtn.setAttribute('data-url', job.url);
-                titleCell.appendChild(detailsBtn);
-                row.appendChild(titleCell);
+                // 案件データが空の場合
+                if (!jobs || jobs.length === 0) {
+                    const emptyRow = document.createElement('tr');
+                    const emptyCell = document.createElement('td');
+                    emptyCell.colSpan = 7;
+                    emptyCell.className = 'text-center';
+                    emptyCell.textContent = '案件が見つかりませんでした';
+                    emptyRow.appendChild(emptyCell);
+                    tableBody.appendChild(emptyRow);
+                    return;
+                }
                 
-                // 予算
-                const budgetCell = document.createElement('td');
-                budgetCell.className = 'budget-column';
-                budgetCell.textContent = job.budget || '-';
-                row.appendChild(budgetCell);
+                // 案件データを追加
+                jobs.forEach(job => {
+                    const row = document.createElement('tr');
+                    
+                    // チェックボックス
+                    const checkCell = document.createElement('td');
+                    checkCell.className = 'check-column';
+                    const checkDiv = document.createElement('div');
+                    checkDiv.className = 'form-check';
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'form-check-input job-check';
+                    checkbox.setAttribute('data-url', job.url);
+                    checkDiv.appendChild(checkbox);
+                    checkCell.appendChild(checkDiv);
+                    row.appendChild(checkCell);
+                    
+                    // タイトル
+                    const titleCell = document.createElement('td');
+                    titleCell.className = 'title-column';
+                    const titleLink = document.createElement('a');
+                    titleLink.href = job.url;
+                    titleLink.target = '_blank';
+                    titleLink.textContent = job.title;
+                    titleCell.appendChild(titleLink);
+                    row.appendChild(titleCell);
+                    
+                    // 詳細ボタン
+                    const detailCell = document.createElement('td');
+                    detailCell.className = 'detail-column';
+                    const detailBtn = document.createElement('button');
+                    detailBtn.className = 'btn btn-sm btn-info';
+                    detailBtn.setAttribute('data-toggle', 'modal');
+                    detailBtn.setAttribute('data-target', '#detailsModal');
+                    detailBtn.setAttribute('data-title', job.title);
+                    detailBtn.setAttribute('data-budget', job.budget);
+                    detailBtn.setAttribute('data-client', job.client);
+                    detailBtn.setAttribute('data-posted-date', job.posted_date);
+                    detailBtn.setAttribute('data-description', job.detail_description || '');
+                    detailBtn.textContent = '詳細を表示';
+                    detailCell.appendChild(detailBtn);
+                    row.appendChild(detailCell);
+                    
+                    // 予算
+                    const budgetCell = document.createElement('td');
+                    budgetCell.className = 'budget-column';
+                    budgetCell.textContent = job.budget || '-';
+                    row.appendChild(budgetCell);
+                    
+                    // クライアント
+                    const clientCell = document.createElement('td');
+                    clientCell.className = 'client-column';
+                    clientCell.textContent = job.client || '-';
+                    row.appendChild(clientCell);
+                    
+                    // 投稿日
+                    const dateCell = document.createElement('td');
+                    dateCell.className = 'date-column';
+                    dateCell.textContent = job.posted_date || '-';
+                    row.appendChild(dateCell);
+                    
+                    // フィルター理由
+                    const reasonCell = document.createElement('td');
+                    reasonCell.className = 'reason-column';
+                    reasonCell.textContent = job.gpt_reason || '-';
+                    row.appendChild(reasonCell);
+                    
+                    tableBody.appendChild(row);
+                });
                 
-                // クライアント
-                const clientCell = document.createElement('td');
-                clientCell.className = 'client-column';
-                clientCell.textContent = job.client || '-';
-                row.appendChild(clientCell);
+                // モーダルイベントの再設定
+                if (typeof $ !== 'undefined') {
+                    $('#detailsModal').on('show.bs.modal', function (event) {
+                        const button = $(event.relatedTarget);
+                        const title = button.data('title');
+                        const budget = button.data('budget');
+                        const client = button.data('client');
+                        const postedDate = button.data('posted-date');
+                        const description = button.data('description');
+                        
+                        const modal = $(this);
+                        modal.find('.modal-title').text(title);
+                        modal.find('.modal-budget').text(budget);
+                        modal.find('.modal-client').text(client);
+                        modal.find('.modal-posted-date').text(postedDate);
+                        modal.find('.modal-description').html(description);
+                    });
+                }
                 
-                // 投稿日
-                const dateCell = document.createElement('td');
-                dateCell.className = 'date-column';
-                dateCell.textContent = job.posted_date || '-';
-                row.appendChild(dateCell);
-                
-                // フィルター理由
-                const reasonCell = document.createElement('td');
-                reasonCell.className = 'reason-column';
-                reasonCell.textContent = job.gpt_reason || '-';
-                row.appendChild(reasonCell);
-                
-                tableBody.appendChild(row);
-            });
+                // 更新完了メッセージ
+                console.log('テーブルの更新が完了しました:', jobs.length, '件');
+                showToast(`${jobs.length}件の新しい案件が取得されました`, 'success');
+            } catch (error) {
+                console.error('テーブル更新中にエラーが発生:', error);
+                showToast('テーブルの更新に失敗しました: ' + error.message, 'error');
+            }
         }
         
         // モデル選択の変更時のイベントハンドラー

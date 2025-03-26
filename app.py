@@ -782,11 +782,25 @@ def fetch_new_data():
                 status_code=500
             )
         
+        # crawled_dataディレクトリの存在確認と作成
+        try:
+            if not os.path.exists('crawled_data'):
+                logger.info("crawled_dataディレクトリが存在しないため作成します")
+                os.makedirs('crawled_data')
+        except Exception as e:
+            return handle_error(
+                e,
+                error_type="ディレクトリエラー",
+                user_message="データ保存ディレクトリの作成に失敗しました。",
+                status_code=500
+            )
+        
         # Pythonインタープリタのパスを取得
         python_executable = sys.executable
         
         # サブプロセスとしてクローラーを実行
         try:
+            logger.info(f"クローラーを実行: {python_executable} {crawler_path}")
             process = subprocess.Popen(
                 [python_executable, crawler_path],
                 stdout=subprocess.PIPE,
@@ -797,12 +811,17 @@ def fetch_new_data():
             # 実行結果を取得
             stdout, stderr = process.communicate()
             
+            # 出力内容をログに記録
+            logger.info(f"クローラー標準出力: {stdout}")
+            if stderr:
+                logger.warning(f"クローラー標準エラー出力: {stderr}")
+            
             if process.returncode != 0:
-                logger.error(f"クローラーの実行に失敗: {stderr}")
+                logger.error(f"クローラーの実行に失敗: 戻り値={process.returncode}, エラー={stderr}")
                 return handle_error(
-                    Exception(f"クローラーの実行に失敗しました"),
+                    Exception(f"クローラーの実行に失敗しました: {stderr}"),
                     error_type="クローラーエラー",
-                    user_message="データの取得に失敗しました。詳細はログを確認してください。",
+                    user_message=f"データの取得に失敗しました: {stderr}",
                     status_code=500
                 )
         except subprocess.SubprocessError as e:
@@ -815,14 +834,50 @@ def fetch_new_data():
         
         # 最新のデータを読み込む
         try:
-            jobs = get_latest_filtered_json()
+            json_files = glob.glob('crawled_data/*_filtered.json')
+            if not json_files:
+                logger.warning("フィルタリング済みJSONファイルが見つかりません")
+                return jsonify({
+                    'status': 'error',
+                    'message': '新規データが見つかりませんでした。ログインエラーや設定の問題が考えられます。',
+                    'crawler_output': stdout,
+                    'crawler_error': stderr
+                }), 404
+                
+            # 最新のファイルを選択
+            latest_file = max(json_files, key=os.path.getctime)
+            logger.info(f"最新のフィルタリング済みJSONファイル: {latest_file}")
+            
+            # ファイルが存在するか確認
+            if not os.path.exists(latest_file) or os.path.getsize(latest_file) == 0:
+                logger.error(f"ファイルが存在しないか空です: {latest_file}")
+                return jsonify({
+                    'status': 'error',
+                    'message': 'データファイルが存在しないか空です。',
+                    'crawler_output': stdout,
+                    'crawler_error': stderr
+                }), 500
+            
+            # ファイルを読み込む
+            with open(latest_file, 'r', encoding='utf-8') as f:
+                jobs = json.load(f)
+                
             logger.info(f"新規データの取得が完了: {len(jobs)}件の案件を取得")
             return jsonify({
                 'status': 'success',
-                'message': '新規データの取得が完了しました',
+                'message': f'新規データの取得が完了しました（{len(jobs)}件）',
                 'jobs': jobs
             })
+        except json.JSONDecodeError as e:
+            logger.error(f"JSONの解析に失敗: {str(e)}, ファイル: {latest_file}")
+            return handle_error(
+                e,
+                error_type="JSONデータエラー",
+                user_message="新規データの解析に失敗しました。データが破損している可能性があります。",
+                status_code=500
+            )
         except Exception as e:
+            logger.error(f"データ読み込みに失敗: {str(e)}\n{traceback.format_exc()}")
             return handle_error(
                 e,
                 error_type="データ読み込みエラー",
