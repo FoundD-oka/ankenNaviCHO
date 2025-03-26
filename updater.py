@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 CURRENT_VERSION = "0.5.1"
 
 # GitHubリポジトリ情報
+# 注意: このリポジトリが存在しないか、リリースがない場合は404エラーになります
 GITHUB_REPO_OWNER = "FoundD-oka"
 GITHUB_REPO_NAME = "ankenNaviCHO"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO_OWNER}/{GITHUB_REPO_NAME}/releases/latest"
@@ -54,20 +55,42 @@ class Updater:
             self.status = "更新を確認中..."
             self.progress = 10
             
-            response = requests.get(GITHUB_API_URL)
-            response.raise_for_status()
-            
-            release_info = response.json()
-            self.latest_version = release_info["tag_name"].lstrip("v")
-            
-            # バージョン比較
-            if semver.compare(self.latest_version, self.current_version) > 0:
-                self.update_available = True
-                self.latest_download_url = release_info["zipball_url"]
-                self.status = f"新しいバージョン {self.latest_version} が利用可能です"
-            else:
+            # GitHubリリースAPIを呼び出す
+            try:
+                response = requests.get(GITHUB_API_URL, timeout=10)
+                response.raise_for_status()  # HTTPエラーを例外として発生させる
+                
+                release_info = response.json()
+                self.latest_version = release_info["tag_name"].lstrip("v")
+                
+                # バージョン比較
+                if semver.compare(self.latest_version, self.current_version) > 0:
+                    self.update_available = True
+                    self.latest_download_url = release_info["zipball_url"]
+                    self.status = f"新しいバージョン {self.latest_version} が利用可能です"
+                    logger.info(f"新しいバージョン {self.latest_version} が見つかりました（現在: {self.current_version}）")
+                else:
+                    self.update_available = False
+                    self.status = "最新バージョンを使用中です"
+                    logger.info(f"使用中のバージョン {self.current_version} は最新です")
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 404:
+                    # 404エラー：リリースが存在しない
+                    logger.error(f"GitHubリリース情報が見つかりません: {e}")
+                    self.status = f"エラー: リリース情報が見つかりません"
+                    self.update_available = False
+                    self.latest_version = None
+                else:
+                    # その他のHTTPエラー
+                    logger.error(f"GitHub APIアクセスエラー: {e}")
+                    self.status = f"エラー: GitHub APIアクセスエラー: {e}"
+                    raise e
+            except requests.exceptions.RequestException as e:
+                # ネットワーク関連エラー
+                logger.error(f"ネットワークエラー: {e}")
+                self.status = f"エラー: ネットワーク接続エラー: {e}"
                 self.update_available = False
-                self.status = "最新バージョンを使用中です"
+                self.latest_version = None
             
             self.progress = 20
             return self.update_available

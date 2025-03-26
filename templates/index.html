@@ -429,6 +429,9 @@
 {% endblock %}
 
 {% block content %}
+<!-- JavaScriptに渡す設定データ -->
+<script id="settings-data" type="application/json" data-settings='{{ settings|tojson }}' style="display: none;"></script>
+
 <div class="wrapper">
     <!-- Sidebar -->
     <nav id="sidebar">
@@ -788,17 +791,40 @@
 
     // DOMの読み込み完了後に実行
     document.addEventListener('DOMContentLoaded', function() {
+        // jQueryの有無を確認
+        if (typeof jQuery !== 'undefined') {
+            console.log('jQuery is loaded:', jQuery.fn.jquery);
+        } else {
+            console.error('jQuery is not loaded!');
+        }
+        
         // サーバーからのデータをJavaScriptオブジェクトに変換
         try {
+            // settings変数をscriptタグから取得
+            const settingsElement = document.getElementById('settings-data');
+            if (settingsElement) {
+                const settingsJson = settingsElement.getAttribute('data-settings');
+                settingsData = JSON.parse(settingsJson);
+                console.log("設定を読み込みました:", settingsData);
+            } else {
+                console.error("設定データの要素が見つかりません");
+                // デフォルト値を設定
             settingsData = {
-                model: "{{ settings.model }}",
-                max_items: {{ settings.max_items }},
-                filter_prompt: "{{ settings.filter_prompt|replace('\n', ' ')|replace('"', '\\"') }}",
-                self_introduction: "{{ settings.self_introduction|replace('\n', ' ')|replace('"', '\\"') }}"
-            };
-            console.log("設定を読み込みました:", settingsData);
+                    model: "gpt-4o",
+                    max_items: 20,
+                    filter_prompt: "",
+                    self_introduction: ""
+                };
+            }
         } catch (error) {
             console.error("設定の読み込み中にエラーが発生しました:", error);
+            // エラー時はデフォルト値を設定
+            settingsData = {
+                model: "gpt-4o",
+                max_items: 20,
+                filter_prompt: "",
+                self_introduction: ""
+            };
         }
 
         // CSRFトークンを取得
@@ -963,7 +989,326 @@
         // フィルター設定のボタンへのイベントリスナーを設定
         document.getElementById('close-filter')?.addEventListener('click', closeFilterSettings);
         document.getElementById('save-filter')?.addEventListener('click', saveFilterSettings);
+        
+        // 更新確認ボタンのイベントリスナーを設定
+        document.getElementById('check-update-link')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('更新確認ボタンがクリックされました');
+            
+            // シンプルなアラートで動作確認
+            alert('更新確認ボタンがクリックされました');
+            
+            // モーダルを直接表示
+            try {
+                const updateModal = document.getElementById('updateModal');
+                if (updateModal) {
+                    // Bootstrapのモーダルを初期化して表示
+                    if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                        $('#updateModal').modal('show');
+                    } else {
+                        // jQueryが利用できない場合はCSSでモーダルを表示
+                        updateModal.style.display = 'block';
+                        updateModal.classList.add('show');
+                        updateModal.setAttribute('aria-hidden', 'false');
+                        document.body.classList.add('modal-open');
+                        
+                        // 背景のオーバーレイを作成
+                        const backdrop = document.createElement('div');
+                        backdrop.className = 'modal-backdrop fade show';
+                        document.body.appendChild(backdrop);
+                    }
+                    
+                    // ステータス表示を更新
+                    const statusMsg = document.getElementById('update-status-message');
+                    if (statusMsg) {
+                        statusMsg.textContent = '更新を確認中...';
+                    }
+                    
+                    // 更新確認APIを実際に呼び出し
+                    console.log('API呼び出し前');
+                    fetch('/api/check_updates', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        },
+                        // バグ回避のためにbodyに空のJSONオブジェクトを含める
+                        body: JSON.stringify({})
+                    })
+                    .then(response => {
+                        console.log('APIレスポンス受信:', response);
+                        if (!response.ok) {
+                            throw new Error('APIサーバーからエラーレスポンス: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('APIデータ受信:', data);
+                        if (data.status === 'success') {
+                            if (data.update_available) {
+                                // 更新が利用可能な場合
+                                statusMsg.textContent = 
+                                    `新しいバージョン ${data.latest_version} が利用可能です（現在のバージョン: ${data.current_version}）`;
+                                document.getElementById('update-start-btn').style.display = 'block';
+                            } else {
+                                // 更新がない場合
+                                statusMsg.textContent = '最新バージョンを使用中です';
+                            }
+                        } else {
+                            // エラーの場合
+                            if (data.status && data.status.includes('404')) {
+                                // 404エラーの場合は分かりやすいメッセージを表示
+                                statusMsg.textContent = 'リリース情報が見つかりません。最初のリリースを作成してください。';
+                                console.error('GitHub API 404エラー: リリース情報が見つかりません');
+                            } else {
+                                // その他のエラー
+                                statusMsg.textContent = `エラー: ${data.status || data.message || '不明なエラー'}`;
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('更新確認中にエラーが発生:', error);
+                        if (statusMsg) {
+                            statusMsg.textContent = `エラー: ${error.message}`;
+                        }
+                        alert('更新確認エラー: ' + error.message);
+                    });
+                } else {
+                    console.error('updateModalが見つかりません');
+                    alert('エラー: 更新モーダルが見つかりません');
+                }
+            } catch (error) {
+                console.error('モーダル表示エラー:', error);
+                alert('エラー: ' + error.message);
+            }
+        });
+        
+        // 更新関連のボタンのイベントリスナーを設定
+        document.getElementById('update-start-btn')?.addEventListener('click', startUpdate);
+        document.getElementById('update-restart-btn')?.addEventListener('click', restartApp);
+        document.getElementById('update-cancel-btn')?.addEventListener('click', function() {
+            // シンプルなJavaScriptでモーダルを閉じる
+            const updateModal = document.getElementById('updateModal');
+            if (updateModal) {
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#updateModal').modal('hide');
+                } else {
+                    updateModal.style.display = 'none';
+                    updateModal.classList.remove('show');
+                    updateModal.setAttribute('aria-hidden', 'true');
+                    document.body.classList.remove('modal-open');
+                    
+                    // 背景のオーバーレイを削除
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        document.body.removeChild(backdrop);
+                    }
+                }
+            }
+        });
+        
+        document.getElementById('update-modal-close')?.addEventListener('click', function() {
+            // 同様にモーダルを閉じるロジック
+            const updateModal = document.getElementById('updateModal');
+            if (updateModal) {
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#updateModal').modal('hide');
+                } else {
+                    updateModal.style.display = 'none';
+                    updateModal.classList.remove('show');
+                    updateModal.setAttribute('aria-hidden', 'true');
+                    document.body.classList.remove('modal-open');
+                    
+                    // 背景のオーバーレイを削除
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        document.body.removeChild(backdrop);
+                    }
+                }
+            }
+        });
     });
+
+    // アップデート確認関数
+    function checkForUpdates() {
+        console.log('checkForUpdates関数が呼び出されました');
+        
+        // 更新モーダルを表示
+        try {
+            console.log('モーダル表示前');
+            $('#updateModal').modal('show');
+            console.log('モーダル表示後');
+            
+            // ステータスメッセージを更新
+            const statusMessage = document.getElementById('update-status-message');
+            if (statusMessage) {
+                statusMessage.textContent = '更新を確認中...';
+                console.log('ステータスメッセージを更新しました');
+            } else {
+                console.error('update-status-messageエレメントが見つかりません');
+            }
+            
+            // 更新確認APIを呼び出し
+            console.log('API呼び出し前');
+            fetch('/api/check_updates', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => {
+                console.log('APIレスポンス受信:', response);
+                return response.json();
+            })
+            .then(data => {
+                console.log('APIデータ受信:', data);
+                if (data.status === 'success') {
+                    if (data.update_available) {
+                        // 更新が利用可能な場合
+                        document.getElementById('update-status-message').textContent = 
+                            `新しいバージョン ${data.latest_version} が利用可能です（現在のバージョン: ${data.current_version}）`;
+                        document.getElementById('update-start-btn').style.display = 'block';
+                    } else {
+                        // 更新がない場合
+                        document.getElementById('update-status-message').textContent = 
+                            '最新バージョンを使用中です';
+                    }
+                } else {
+                    // エラーの場合
+                    document.getElementById('update-status-message').textContent = 
+                        `エラー: ${data.status || data.message || '不明なエラー'}`;
+                }
+            })
+            .catch(error => {
+                console.error('更新確認中にエラーが発生:', error);
+                document.getElementById('update-status-message').textContent = 
+                    `エラー: ${error.message}`;
+            });
+        } catch (error) {
+            console.error('checkForUpdates関数の実行中にエラーが発生しました:', error);
+            alert('更新処理でエラーが発生しました: ' + error.message);
+        }
+    }
+    
+    // 更新開始関数
+    function startUpdate() {
+        console.log('startUpdate関数が呼び出されました');
+        
+        try {
+            // 更新開始ボタンを非表示
+            document.getElementById('update-start-btn').style.display = 'none';
+            
+            // ステータスメッセージを更新
+            const statusMsg = document.getElementById('update-status-message');
+            if (statusMsg) {
+                statusMsg.textContent = '更新を開始しています...';
+            }
+            
+            // プログレスバーを表示
+            const progressContainer = document.getElementById('update-progress-container');
+            const progressBar = document.getElementById('update-progress-bar');
+            if (progressContainer && progressBar) {
+                progressContainer.style.display = 'block';
+                progressBar.style.width = '0%';
+                progressBar.setAttribute('aria-valuenow', '0');
+            }
+            
+            // 更新実行APIを呼び出し
+            console.log('更新実行API呼び出し前');
+            fetch('/api/perform_update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => {
+                console.log('更新実行APIレスポンス:', response);
+                if (!response.ok) {
+                    throw new Error('APIサーバーからエラーレスポンス: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('更新実行データ受信:', data);
+                if (data.status === 'success') {
+                    // 更新が開始された場合、状態を定期的に確認
+                    statusMsg.textContent = '更新処理を実行中...';
+                    startUpdateStatusCheck();
+                } else {
+                    // エラーの場合
+                    statusMsg.textContent = `更新開始エラー: ${data.message}`;
+                }
+            })
+            .catch(error => {
+                console.error('更新実行中にエラーが発生:', error);
+                if (statusMsg) {
+                    statusMsg.textContent = `エラー: ${error.message}`;
+                }
+            });
+        } catch (error) {
+            console.error('startUpdate関数実行エラー:', error);
+            alert('更新開始エラー: ' + error.message);
+        }
+    }
+    
+    // 更新状況の定期的な確認
+    function startUpdateStatusCheck() {
+        console.log('更新状況確認を開始');
+        
+        // 更新状況の定期的な確認
+        const statusInterval = setInterval(function() {
+            fetch('/api/update_status')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('APIサーバーからエラーレスポンス: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('更新状況データ:', data);
+                const statusMsg = document.getElementById('update-status-message');
+                const progressBar = document.getElementById('update-progress-bar');
+                
+                if (data.status === 'success') {
+                    // プログレスバーを更新
+                    if (progressBar) {
+                        progressBar.style.width = `${data.progress}%`;
+                        progressBar.setAttribute('aria-valuenow', data.progress);
+                    }
+                    
+                    if (statusMsg) {
+                        statusMsg.textContent = data.message;
+                    }
+                    
+                    // 更新が完了または失敗した場合
+                    if (data.progress >= 100 || data.message.includes('完了')) {
+                        clearInterval(statusInterval);
+                        document.getElementById('update-restart-btn').style.display = 'block';
+                    } else if (data.message.includes('エラー') || data.message.includes('失敗')) {
+                        clearInterval(statusInterval);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('更新状況確認中にエラーが発生:', error);
+                clearInterval(statusInterval);
+                
+                const statusMsg = document.getElementById('update-status-message');
+                if (statusMsg) {
+                    statusMsg.textContent = `エラー: ${error.message}`;
+                }
+            });
+        }, 1000);
+    }
+    
+    // アプリケーション再起動関数
+    function restartApp() {
+        // ページをリロード
+        window.location.reload();
+    }
 
     // 設定を更新する関数
     function updateSettings(newSettings) {
