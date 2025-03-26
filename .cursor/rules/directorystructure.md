@@ -42,7 +42,7 @@ Selenium/
 ├── app.py                       # メインアプリケーション
 ├── app_launcher.py              # アプリケーション起動スクリプト
 ├── bulk_apply.py                # 一括応募スクリプト
-├── build_app.sh                 # アプリケーションビルドスクリプト
+├── simple_installer.sh          # アプリケーションビルドスクリプト
 ├── chromedriver                 # ChromeDriverバイナリ
 ├── chromedriver_manager.py      # ChromeDriver管理スクリプト
 ├── crawler.py                   # クローラースクリプト

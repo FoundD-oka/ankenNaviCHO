@@ -4,7 +4,7 @@ from setuptools import setup
 APP = ['app_launcher.py']
 DATA_FILES = [
     'templates',
-    'app/static',
+    'static',
     'drivers',
     '.env',
     'chromedriver',
