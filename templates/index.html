@@ -842,6 +842,15 @@
             showSelfIntroSettings();
         });
 
+        // ブラウザウィンドウが閉じられる前に実行されるイベント
+        window.addEventListener('beforeunload', function(event) {
+            // 送信するデータを作成
+            const data = JSON.stringify({ closed: true });
+            
+            // ブラウザが閉じられる前にFlaskへ通知を送信
+            navigator.sendBeacon('/api/browser_close', new Blob([data], {type: 'application/json'}));
+        });
+
         // フィルター設定を表示する関数
         function showFilterSettings() {
             try {

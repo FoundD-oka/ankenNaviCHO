@@ -12,6 +12,9 @@ from dotenv import load_dotenv, set_key
 from pathlib import Path
 import subprocess
 import sys
+import signal
+import threading
+import time
 from bulk_apply import register_bulk_apply_routes, init_bulk_apply
 from supabase import create_client, Client
 import logging
@@ -33,6 +36,9 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# Nodeサーバーのサブプロセスを保持する変数
+node_process = None
 
 # エラーハンドリングのためのユーティリティ関数
 def handle_error(e, error_type="一般エラー", user_message=None, status_code=500):
@@ -92,6 +98,7 @@ csrf.exempt('/api/check_updates')
 csrf.exempt('/api/perform_update')
 csrf.exempt('/api/update_status')
 csrf.exempt('/bulk_apply')
+csrf.exempt('/api/browser_close')  # ブラウザ終了通知のエンドポイントも除外
 
 # Supabaseクライアントの初期化
 supabase: Client = create_client(
@@ -1313,9 +1320,107 @@ def chromedriver_error():
     error_message = request.args.get('message', 'ChromeDriverの設定に問題が発生しました。')
     return render_template('error.html', error_message=error_message)
 
+# アプリケーション終了時の処理
+def cleanup_resources():
+    # ChromeDriverのバックグラウンド更新を停止
+    chromedriver_manager.stop_background_update()
+    logger.info("ChromeDriverのバックグラウンド更新を停止しました")
+    
+    # Nodeサーバーも終了させる
+    stop_node_server()
+
+# Nodeサーバーを停止する関数
+def stop_node_server():
+    global node_process
+    if node_process:
+        try:
+            logger.info(f"Nodeサーバーを終了します (PID={node_process.pid})")
+            node_process.terminate()
+            
+            # 終了を確認し、必要に応じて強制終了
+            time.sleep(1)
+            if node_process.poll() is None:
+                logger.info(f"Nodeサーバーを強制終了します (PID={node_process.pid})")
+                if sys.platform == 'win32':
+                    subprocess.call(['taskkill', '/F', '/T', '/PID', str(node_process.pid)])
+                else:
+                    os.kill(node_process.pid, signal.SIGKILL)
+            
+            node_process = None
+            logger.info("Nodeサーバーを終了しました")
+        except Exception as e:
+            logger.error(f"Nodeサーバー終了処理中にエラー: {str(e)}")
+
+# Nodeサーバーを起動する関数
+def start_node_server():
+    global node_process
+    
+    if node_process is not None:
+        logger.info("Nodeサーバーは既に起動しています")
+        return
+    
+    try:
+        # 環境変数から起動コマンドを取得（デフォルトは「npm run dev」）
+        node_cmd = os.getenv('NODE_SERVER_CMD', 'npm run dev').split()
+        
+        # カレントディレクトリからNodeサーバーのディレクトリを取得（デフォルトはカレントディレクトリ）
+        node_dir = os.getenv('NODE_SERVER_DIR', '.')
+        
+        logger.info(f"Nodeサーバーを起動します: {' '.join(node_cmd)} in {node_dir}")
+        
+        # Nodeサーバーを起動
+        node_process = subprocess.Popen(
+            node_cmd,
+            cwd=node_dir,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        logger.info(f"Nodeサーバーを起動しました (PID={node_process.pid})")
+    except Exception as e:
+        logger.error(f"Nodeサーバーの起動に失敗: {str(e)}\n{traceback.format_exc()}")
+
+# アプリケーション終了時に実行する関数を登録
+atexit.register(cleanup_resources)
+
+# 初期化関数を定義
+def init_app():
+    """アプリケーション初期化時に実行される関数"""
+    # Nodeサーバーを起動
+    start_node_server()
+
+# ブラウザ終了通知を受け取るAPIエンドポイント
+@app.route('/api/browser_close', methods=['POST'])
+@csrf.exempt  # CSRFトークン検証を除外
+def browser_close():
+    """ブラウザが閉じられたときに呼び出されるAPI"""
+    try:
+        # ブラウザからのデータを取得
+        data = request.get_json(silent=True) or {}
+        
+        # Nodeサーバーを終了
+        stop_node_server()
+        
+        logger.info("ブラウザ終了通知を受信しました。Nodeサーバーを終了しました。")
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Nodeサーバーを終了しました'
+        })
+    except Exception as e:
+        logger.error(f"ブラウザ終了処理中にエラー: {str(e)}\n{traceback.format_exc()}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
 if __name__ == '__main__':
     # 起動時に古いデータを削除
     clear_old_job_data()
+    
+    # アプリケーションを初期化
+    init_app()
     
     # .envファイルから環境変数PORTを取得
     port = int(os.getenv('PORT', 8000))
