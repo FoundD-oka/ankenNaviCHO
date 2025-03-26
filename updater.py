@@ -23,7 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 現在のアプリバージョン
-CURRENT_VERSION = "0.5.1"
+CURRENT_VERSION = "0.5.3"
 
 # GitHubリポジトリ情報
 # 注意: このリポジトリが存在しないか、リリースがない場合は404エラーになります
