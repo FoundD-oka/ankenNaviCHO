@@ -23,7 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 現在のアプリバージョン
-CURRENT_VERSION = "0.5.6"
+CURRENT_VERSION = "0.5.7"
 
 # GitHubリポジトリ情報
 # 注意: このリポジトリが存在しないか、リリースがない場合は404エラーになります
@@ -132,8 +132,8 @@ class Updater:
             backup_dir.mkdir(parents=True, exist_ok=True)
             
             # 重要なファイルとディレクトリをバックアップ
-            # .git, __pycache__, logs, backups, crawled_dataを除外
-            exclude_dirs = ['.git', '__pycache__', 'logs', 'backups', 'crawled_data']
+            # .git, __pycache__, logs, backups, crawled_data, chromedriverを除外
+            exclude_dirs = ['.git', '__pycache__', 'logs', 'backups', 'crawled_data', 'chromedriver']
             
             # バックアップ操作をログに記録
             logger.info(f"バックアップを作成中: {backup_dir}")
@@ -202,8 +202,8 @@ class Updater:
                 self.status = "ファイルを更新中..."
                 
                 # 現在のディレクトリにファイルをコピー
-                # .git, __pycache__, logs, backups, crawled_dataを除外
-                exclude_dirs = ['.git', '__pycache__', 'logs', 'backups', 'crawled_data']
+                # .git, __pycache__, logs, backups, crawled_data, chromedriverを除外
+                exclude_dirs = ['.git', '__pycache__', 'logs', 'backups', 'crawled_data', 'chromedriver']
                 
                 # 更新操作をログに記録
                 logger.info(f"ファイル更新を開始します。ソース: {source_dir}")
@@ -341,8 +341,8 @@ class Updater:
             self.progress = 95
             
             # バックアップから復元
-            # .git, __pycache__, logs, backups, crawled_dataを除外
-            exclude_dirs = ['.git', '__pycache__', 'logs', 'backups', 'crawled_data']
+            # .git, __pycache__, logs, backups, crawled_data, chromedriverを除外
+            exclude_dirs = ['.git', '__pycache__', 'logs', 'backups', 'crawled_data', 'chromedriver']
             
             logger.info(f"ロールバックを開始します: {self.backup_path}")
             
