@@ -314,18 +314,23 @@
         background-color: #fff;
         box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
         border-radius: 10px;
-        z-index: 1050;
+        z-index: 10500;
         padding: 30px;
         overflow: auto;
         max-height: 80vh;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
     }
 
     .toast-notification.success {
         background: #28a745;
+        color: white;
     }
 
     .toast-notification.error {
         background: #dc3545;
+        color: white;
     }
 
     .toast-notification.warning {
@@ -334,30 +339,32 @@
     }
 
     .toast-notification.show {
+        display: block !important;
         opacity: 1;
     }
 
     /* フィルター設定トースト用スタイル */
+    /* 以下のトースト用スタイルはモーダル化に伴い不要になります 
     .filter-settings-toast {
         max-width: 700px;
         width: 90%;
-        max-height: 300px; /* トーストの高さを制限 */
-        overflow-y: auto; /* 内容が多い場合はスクロール可能に */
+        max-height: 300px;
+        overflow-y: auto;
         background: rgba(255, 255, 255, 0.98);
         color: #333;
         padding: 15px 20px;
         box-shadow: 0 6px 16px rgba(0,0,0,0.2);
         display: none;
         position: fixed;
-        left: 270px; /* サイドバーの幅(250px) + 最小余白 */
-        z-index: 9999;
+        left: 270px;
+        z-index: 10000;
         border-radius: 8px;
         backdrop-filter: blur(5px);
-        transform: none; /* 中央配置の変換をリセット */
+        transform: none;
     }
 
     .filter-settings-toast.show {
-        display: block;
+        display: block !important;
         opacity: 1;
     }
 
@@ -393,6 +400,7 @@
         margin-bottom: 0.8rem;
         font-size: 1.4rem;
     }
+    */
     
     .progress-container progress {
         width: 100%;
@@ -418,21 +426,29 @@
     }
 
     /* 自己紹介内容トースト用スタイル */
+    /* 以下のトースト用スタイルはモーダル化に伴い不要になります
     .self-intro-toast {
         max-width: 700px;
         width: 90%;
-        max-height: 600px; /* トーストの高さを制限 */
+        max-height: 600px;
         background: rgba(255, 255, 255, 0.98);
         color: #333;
         padding: 15px 20px;
         box-shadow: 0 6px 16px rgba(0,0,0,0.2);
         position: fixed;
-        left: 270px; /* サイドバーの幅(250px) + 最小余白 */
-        z-index: 9999;
+        display: none;
+        left: 270px;
+        z-index: 10000;
         border-radius: 8px;
         backdrop-filter: blur(5px);
-        transform: none; /* 中央配置の変換をリセット */
+        transform: none;
     }
+
+    .self-intro-toast.show {
+        display: block !important;
+        opacity: 1;
+    }
+    */
 </style>
 {% endblock %}
 
@@ -444,7 +460,7 @@
     <!-- Sidebar -->
     <nav id="sidebar">
         <div class="sidebar-header">
-            <h3>案件naviCHO <small style="font-size: 0.6em;">v0.6.0</small></h3>
+            <h3>案件naviCHO <small style="font-size: 0.6em;">v0.6.2</small></h3>
         </div>
         
         <div class="user-info">
@@ -630,6 +646,7 @@
             </div>
 
             <!-- フィルター設定トースト -->
+            <!-- トーストからモーダルに変更するためコメントアウト
             <div class="toast-notification filter-settings-toast" style="display: none;">
                 <div class="filter-settings">
                     <h5>フィルター設定</h5>
@@ -644,8 +661,10 @@
                     </div>
                 </div>
             </div>
+            -->
 
             <!-- 自己紹介内容トースト -->
+            <!-- トーストからモーダルに変更するためコメントアウト
             <div class="toast-notification self-intro-toast" style="display: none;">
                 <div class="self-intro-settings">
                     <h5>自己紹介内容</h5>
@@ -660,6 +679,7 @@
                     </div>
                 </div>
             </div>
+            -->
         </div>
     </div>
 </div>
@@ -807,6 +827,56 @@
         </div>
     </div>
 </div>
+
+<!-- フィルター設定モーダル -->
+<div class="modal fade" id="filterSettingsModal" tabindex="-1" role="dialog" aria-labelledby="filterSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filterSettingsModalLabel">フィルター設定</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group mt-3">
+                    <p class="text-muted small">案件をフィルタリングするための条件を入力してください。</p>
+                    <textarea class="form-control" id="filter-prompt" rows="6"
+                            placeholder="例: 予算が10,000円以上で、Pythonに関連する案件のみ選択">{{ settings.filter_prompt }}</textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="close-filter">閉じる</button>
+                <button type="button" class="btn btn-primary" id="save-filter">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 自己紹介内容モーダル -->
+<div class="modal fade" id="selfIntroModal" tabindex="-1" role="dialog" aria-labelledby="selfIntroModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="selfIntroModalLabel">自己紹介内容</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group mt-3">
+                    <p class="text-muted small">案件応募時に使用する自己紹介文を入力してください。</p>
+                    <textarea class="form-control" id="self-intro-text" rows="10"
+                            placeholder="例: 私は5年以上のWeb開発経験を持つフリーランスエンジニアです。">{{ settings.self_introduction }}</textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="close-self-intro">閉じる</button>
+                <button type="button" class="btn btn-primary" id="save-self-intro">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -857,16 +927,30 @@
         const csrfToken = "{{ csrf_token() }}";
 
         // フィルター設定リンクのクリックイベント
-        document.querySelector('.filter-settings-link').addEventListener('click', function(e) {
-            e.preventDefault();
-            showFilterSettings();
-        });
+        const filterSettingsLink = document.querySelector('.filter-settings-link');
+        if (filterSettingsLink) {
+            console.log('フィルター設定リンクを見つけました');
+            filterSettingsLink.addEventListener('click', function(e) {
+                console.log('フィルター設定リンクがクリックされました');
+                e.preventDefault();
+                showFilterSettings();
+            });
+        } else {
+            console.error('フィルター設定リンクが見つかりません');
+        }
         
         // 自己紹介内容リンクのクリックイベント
-        document.querySelector('.self-intro-link').addEventListener('click', function(e) {
-            e.preventDefault();
-            showSelfIntroSettings();
-        });
+        const selfIntroLink = document.querySelector('.self-intro-link');
+        if (selfIntroLink) {
+            console.log('自己紹介内容リンクを見つけました');
+            selfIntroLink.addEventListener('click', function(e) {
+                console.log('自己紹介内容リンクがクリックされました');
+                e.preventDefault();
+                showSelfIntroSettings();
+            });
+        } else {
+            console.error('自己紹介内容リンクが見つかりません');
+        }
 
         // ブラウザウィンドウが閉じられる前に実行されるイベント
         window.addEventListener('beforeunload', function(event) {
@@ -880,24 +964,23 @@
         // フィルター設定を表示する関数
         function showFilterSettings() {
             try {
-                let filterToast = document.querySelector('.filter-settings-toast');
-                if (filterToast) {
-                    // クリックされたリンクの位置を取得
-                    const filterLink = document.querySelector('.filter-settings-link');
-                    const rect = filterLink.getBoundingClientRect();
-                    
-                    // リンクの位置に合わせてトーストを配置
-                    filterToast.style.top = `${rect.top}px`;
-                    filterToast.style.display = 'block';
-                    
-                    // テキストエリアの内容を設定から取得
-                    const filterPrompt = document.getElementById('filter-prompt');
-                    if (filterPrompt) {
-                        filterPrompt.value = settingsData.filter_prompt || '';
-                    }
+                console.log('showFilterSettings関数が呼び出されました');
+                
+                // モーダルを表示
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#filterSettingsModal').modal('show');
+                    console.log('フィルター設定モーダルを表示しました');
                 } else {
-                    console.error('フィルター設定トースト要素が見つかりません');
+                    console.error('jQueryが読み込まれていないため、モーダルを表示できません');
                     showToast('フィルター設定を表示できません', 'error');
+                    return;
+                }
+                
+                // テキストエリアの内容を設定から取得
+                const filterPrompt = document.getElementById('filter-prompt');
+                if (filterPrompt) {
+                    filterPrompt.value = settingsData.filter_prompt || '';
+                    console.log('フィルタープロンプトの値を設定しました');
                 }
             } catch (error) {
                 console.error('フィルター設定の表示中にエラーが発生しました:', error);
@@ -908,11 +991,12 @@
         // フィルター設定を閉じる関数
         function closeFilterSettings() {
             try {
-                const filterToast = document.querySelector('.filter-settings-toast');
-                if (filterToast) {
-                    filterToast.style.display = 'none';
+                console.log('closeFilterSettings関数が呼び出されました');
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#filterSettingsModal').modal('hide');
+                    console.log('フィルター設定モーダルを閉じました');
                 } else {
-                    console.error('フィルター設定トースト要素が見つかりません');
+                    console.error('jQueryが読み込まれていないため、モーダルを閉じられません');
                 }
             } catch (error) {
                 console.error('フィルター設定を閉じる際にエラーが発生しました:', error);
@@ -922,6 +1006,7 @@
         // フィルター設定を保存する関数
         function saveFilterSettings() {
             try {
+                console.log('saveFilterSettings関数が呼び出されました');
                 const filterPrompt = document.getElementById('filter-prompt');
                 if (filterPrompt) {
                     const filterValue = filterPrompt.value;
@@ -932,7 +1017,7 @@
                     // サーバーに設定を送信
                     updateSettings({ filter_prompt: filterValue });
                     
-                    // トーストを閉じる
+                    // モーダルを閉じる
                     closeFilterSettings();
                     
                     // 成功メッセージを表示
@@ -950,24 +1035,23 @@
         // 自己紹介内容を表示する関数
         function showSelfIntroSettings() {
             try {
-                let selfIntroToast = document.querySelector('.self-intro-toast');
-                if (selfIntroToast) {
-                    // クリックされたリンクの位置を取得
-                    const selfIntroLink = document.querySelector('.self-intro-link');
-                    const rect = selfIntroLink.getBoundingClientRect();
-                    
-                    // リンクの位置に合わせてトーストを配置
-                    selfIntroToast.style.top = `${rect.top}px`;
-                    selfIntroToast.style.display = 'block';
-                    
-                    // テキストエリアの内容を設定から取得
-                    const selfIntroText = document.getElementById('self-intro-text');
-                    if (selfIntroText) {
-                        selfIntroText.value = settingsData.self_introduction || '';
-                    }
+                console.log('showSelfIntroSettings関数が呼び出されました');
+                
+                // モーダルを表示
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#selfIntroModal').modal('show');
+                    console.log('自己紹介内容モーダルを表示しました');
                 } else {
-                    console.error('自己紹介内容トースト要素が見つかりません');
+                    console.error('jQueryが読み込まれていないため、モーダルを表示できません');
                     showToast('自己紹介内容を表示できません', 'error');
+                    return;
+                }
+                
+                // テキストエリアの内容を設定から取得
+                const selfIntroText = document.getElementById('self-intro-text');
+                if (selfIntroText) {
+                    selfIntroText.value = settingsData.self_introduction || '';
+                    console.log('自己紹介テキストの値を設定しました');
                 }
             } catch (error) {
                 console.error('自己紹介内容の表示中にエラーが発生しました:', error);
@@ -978,11 +1062,12 @@
         // 自己紹介内容を閉じる関数
         function closeSelfIntroSettings() {
             try {
-                const selfIntroToast = document.querySelector('.self-intro-toast');
-                if (selfIntroToast) {
-                    selfIntroToast.style.display = 'none';
+                console.log('closeSelfIntroSettings関数が呼び出されました');
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#selfIntroModal').modal('hide');
+                    console.log('自己紹介内容モーダルを閉じました');
                 } else {
-                    console.error('自己紹介内容トースト要素が見つかりません');
+                    console.error('jQueryが読み込まれていないため、モーダルを閉じられません');
                 }
             } catch (error) {
                 console.error('自己紹介内容を閉じる際にエラーが発生しました:', error);
@@ -1024,6 +1109,20 @@
         // フィルター設定のボタンへのイベントリスナーを設定
         document.getElementById('close-filter')?.addEventListener('click', closeFilterSettings);
         document.getElementById('save-filter')?.addEventListener('click', saveFilterSettings);
+        
+        // モーダルのクローズボタン（「×」マーク）へのイベントリスナーも設定
+        document.querySelectorAll('#filterSettingsModal .close, #selfIntroModal .close')
+            .forEach(button => {
+                button.addEventListener('click', function() {
+                    // 親要素のIDを取得してどのモーダルのボタンかを判断
+                    const modalId = this.closest('.modal').id;
+                    if (modalId === 'filterSettingsModal') {
+                        closeFilterSettings();
+                    } else if (modalId === 'selfIntroModal') {
+                        closeSelfIntroSettings();
+                    }
+                });
+            });
         
         // 更新確認ボタンのイベントリスナーを設定
         document.getElementById('check-update-link')?.addEventListener('click', function(e) {
@@ -1211,7 +1310,7 @@
         });
         
         // 全データクリアボタンのイベントリスナーを設定
-        document.querySelector('.clear-all-data-link')?.addEventListener('click', function(e) {
+        document.getElementById('clear-all-data-link')?.addEventListener('click', function(e) {
             e.preventDefault();
             // モーダルを表示
             if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
@@ -1986,19 +2085,27 @@
 
     // トースト表示関数
     function showToast(message, type) {
+        console.log('showToast関数が呼び出されました:', message, type);
         const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
+        toast.className = `toast-notification ${type}`;
         toast.innerHTML = message;
         document.body.appendChild(toast);
         
+        console.log('トースト要素を作成しました:', toast);
+        
+        // 表示のタイミングを少し遅らせる
         setTimeout(() => {
             toast.classList.add('show');
+            console.log('トーストにshowクラスを追加しました');
         }, 10);
         
+        // 一定時間後に非表示
         setTimeout(() => {
             toast.classList.remove('show');
+            console.log('トーストからshowクラスを削除しました');
             setTimeout(() => {
                 document.body.removeChild(toast);
+                console.log('トーストを削除しました');
             }, 300);
         }, 3000);
     }
