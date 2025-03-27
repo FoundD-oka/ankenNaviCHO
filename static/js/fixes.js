@@ -83,19 +83,39 @@ document.addEventListener('DOMContentLoaded', function() {
                         return response.json();
                     })
                     .then(data => {
-                        if (data.status === 'success' || data.update_available === true) {
-                            if (data.update_available) {
-                                // 更新が利用可能な場合
-                                const message = data.message || `新しいバージョン ${data.latest_version} が利用可能です（現在のバージョン: ${data.current_version}）`;
-                                statusMsg.textContent = message;
-                                document.getElementById('update-start-btn').style.display = 'block';
-                            } else {
-                                // 更新がない場合
-                                statusMsg.textContent = '最新バージョンを使用中です';
-                            }
-                        } else {
-                            // エラーの場合
+                        // ステータスメッセージ要素
+                        const statusMsg = document.getElementById('update-status-message');
+                        if (!statusMsg) {
+                            console.error('update-status-message要素が見つかりません');
+                            return;
+                        }
+                        
+                        // 更新ボタン要素
+                        const updateStartBtn = document.getElementById('update-start-btn');
+                        if (!updateStartBtn) {
+                            console.error('update-start-btn要素が見つかりません');
+                            return;
+                        }
+                        
+                        // アップデートが利用可能な場合
+                        if (data.update_available === true) {
+                            const message = data.message || `新しいバージョン ${data.latest_version} が利用可能です（現在のバージョン: ${data.current_version}）`;
+                            statusMsg.textContent = message;
+                            statusMsg.classList.remove('text-danger');
+                            updateStartBtn.style.display = 'block';
+                            console.log('更新ボタンを表示しました');
+                        } 
+                        // 正常だが更新なしの場合
+                        else if (data.status === 'success' || data.status === '最新バージョンを使用中です') {
+                            statusMsg.textContent = '最新バージョンを使用中です';
+                            statusMsg.classList.remove('text-danger');
+                            updateStartBtn.style.display = 'none';
+                        }
+                        // エラーの場合
+                        else {
                             statusMsg.textContent = `エラー: ${data.status || data.message || '不明なエラー'}`;
+                            statusMsg.classList.add('text-danger');
+                            updateStartBtn.style.display = 'none';
                         }
                     })
                     .catch(error => {
