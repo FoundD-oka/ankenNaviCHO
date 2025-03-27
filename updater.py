@@ -23,7 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 現在のアプリバージョン
-CURRENT_VERSION = "0.5.7"
+CURRENT_VERSION = "0.5.6"
 
 # GitHubリポジトリ情報
 # 注意: このリポジトリが存在しないか、リリースがない場合は404エラーになります
@@ -208,22 +208,39 @@ class Updater:
                 # 更新操作をログに記録
                 logger.info(f"ファイル更新を開始します。ソース: {source_dir}")
                 
+                # 更新ファイルを一時的なファイルリストに保存
+                update_files = []
                 for item in source_dir.iterdir():
                     if item.name in exclude_dirs:
                         continue
                     
-                    dest_path = Path('.') / item.name
-                    
-                    if item.is_file():
-                        shutil.copy2(item, dest_path)
-                        logger.info(f"ファイルを更新: {item.name}")
-                    elif item.is_dir():
-                        if dest_path.exists():
-                            shutil.rmtree(dest_path)
-                        shutil.copytree(item, dest_path, 
-                                       ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
-                        logger.info(f"ディレクトリを更新: {item.name}")
-            
+                    update_files.append((item, Path('.') / item.name))
+                
+                # 再起動を防ぐために、Python実行ファイルを最後に更新
+                python_files = [file_tuple for file_tuple in update_files if file_tuple[0].name.endswith('.py')]
+                non_python_files = [file_tuple for file_tuple in update_files if not file_tuple[0].name.endswith('.py')]
+                
+                # まず非Pythonファイルを更新
+                for src, dest in non_python_files:
+                    if src.is_file():
+                        shutil.copy2(src, dest)
+                        logger.info(f"ファイルを更新: {src.name}")
+                    elif src.is_dir():
+                        if dest.exists():
+                            shutil.rmtree(dest)
+                        shutil.copytree(src, dest, 
+                                      ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+                        logger.info(f"ディレクトリを更新: {src.name}")
+                
+                # 依存関係のインストール（Pythonファイル更新前に実行）
+                logger.info("ファイル更新プロセスを行った後に依存関係をインストールします")
+
+                # 最後にPythonファイルを更新
+                for src, dest in python_files:
+                    if src.is_file():
+                        shutil.copy2(src, dest)
+                        logger.info(f"Pythonファイルを更新: {src.name}")
+                
             self.progress = 80
             self.status = "更新ファイルのインストール完了"
             return True
@@ -248,32 +265,72 @@ class Updater:
             
             # バックアップの作成
             if not self.create_backup():
+                logger.error(f"バックアップの作成に失敗しました: {self.status}")
                 return {"success": False, "message": self.status}
             
             # 更新のダウンロードとインストール
-            if not self.download_update():
+            try:
+                if not self.download_update():
+                    # ロールバック処理
+                    logger.error("更新に失敗したためロールバックを実行します")
+                    if not self.rollback():
+                        logger.error("ロールバックに失敗しました")
+                        return {"success": False, "message": f"{self.status} - ロールバックにも失敗しました"}
+                    else:
+                        logger.info("ロールバック完了")
+                        return {"success": False, "message": f"{self.status} - ロールバックしました"}
+            except Exception as download_error:
+                logger.error(f"更新ダウンロード中に例外が発生しました: {str(download_error)}")
                 # ロールバック処理
-                logger.error("更新に失敗したためロールバックを実行します")
                 if not self.rollback():
                     logger.error("ロールバックに失敗しました")
-                    return {"success": False, "message": f"{self.status} - ロールバックにも失敗しました"}
+                    return {"success": False, "message": f"ダウンロードエラー: {str(download_error)} - ロールバックにも失敗しました"}
                 else:
-                    logger.info("ロールバック完了")
-                    return {"success": False, "message": f"{self.status} - ロールバックしました"}
+                    return {"success": False, "message": f"ダウンロードエラー: {str(download_error)} - ロールバックしました"}
             
             # 依存関係のインストール
-            if not self.install_dependencies():
+            try:
+                if not self.install_dependencies():
+                    # ロールバック処理
+                    logger.error("依存関係のインストールに失敗したためロールバックを実行します")
+                    if not self.rollback():
+                        logger.error("ロールバックに失敗しました")
+                        return {"success": False, "message": f"{self.status} - ロールバックにも失敗しました"}
+                    else:
+                        logger.info("ロールバック完了")
+                        return {"success": False, "message": f"{self.status} - ロールバックしました"}
+            except Exception as dep_error:
+                logger.error(f"依存関係インストール中に例外が発生しました: {str(dep_error)}")
                 # ロールバック処理
-                logger.error("依存関係のインストールに失敗したためロールバックを実行します")
                 if not self.rollback():
                     logger.error("ロールバックに失敗しました")
-                    return {"success": False, "message": f"{self.status} - ロールバックにも失敗しました"}
+                    return {"success": False, "message": f"依存関係エラー: {str(dep_error)} - ロールバックにも失敗しました"}
                 else:
-                    logger.info("ロールバック完了")
-                    return {"success": False, "message": f"{self.status} - ロールバックしました"}
+                    return {"success": False, "message": f"依存関係エラー: {str(dep_error)} - ロールバックしました"}
             
+            # 更新の最終段階を完了
             self.progress = 100
             self.status = f"バージョン {self.latest_version} への更新が完了しました"
+            # 最後に現在のバージョンを更新
+            try:
+                # CURRENT_VERSIONの値を新しいバージョンに更新
+                with open(__file__, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # 正規表現でCURRENT_VERSION行を探す
+                import re
+                pattern = r'CURRENT_VERSION\s*=\s*["\'](.+?)["\']'
+                new_content = re.sub(pattern, f'CURRENT_VERSION = "{self.latest_version}"', content)
+                
+                # 更新されたファイルを書き込む
+                with open(__file__, 'w', encoding='utf-8') as f:
+                    f.write(new_content)
+                
+                logger.info(f"現在のバージョンを {self.latest_version} に更新しました")
+            except Exception as ver_error:
+                logger.error(f"バージョン情報の更新に失敗: {str(ver_error)}")
+                # バージョン更新に失敗しても致命的ではないので続行
+                
             return {"success": True, "message": self.status, "version": self.latest_version}
             
         except Exception as e:
@@ -303,13 +360,35 @@ class Updater:
             req_file = Path("requirements.txt")
             if req_file.exists():
                 logger.info("requirements.txtを使用して依存関係をインストールします")
-                result = subprocess.run(
-                    [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], 
-                    check=True, capture_output=True, text=True
-                )
-                logger.info(f"pip install 結果: {result.stdout}")
+                
+                # 一時ディレクトリにrequirements.txtをコピー
+                # これにより元のファイルの監視によるリロードを防止
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    temp_req_path = Path(temp_dir) / "temp_requirements.txt"
+                    shutil.copy2(req_file, temp_req_path)
+                    
+                    logger.info(f"依存関係のインストールに一時ファイルを使用: {temp_req_path}")
+                    
+                    # アプリケーション再起動を防ぐためにサブプロセスを分離して実行
+                    # --no-deps オプションと --no-cache-dir オプションを追加して最小限のインストールを実行
+                    result = subprocess.run(
+                        [sys.executable, "-m", "pip", "install", "-r", str(temp_req_path), "--no-deps", "--no-cache-dir"], 
+                        check=False, capture_output=True, text=True
+                    )
+                
+                # 結果の詳細ログ記録
+                logger.info(f"pip install 終了コード: {result.returncode}")
+                if result.stdout:
+                    logger.info(f"pip install 結果: {result.stdout}")
                 if result.stderr:
-                    logger.warning(f"pip install 警告: {result.stderr}")
+                    logger.warning(f"pip install 警告/エラー: {result.stderr}")
+                
+                # エラーチェック
+                if result.returncode != 0:
+                    logger.error(f"依存関係のインストールが失敗しました（コード: {result.returncode}）")
+                    raise Exception(f"依存関係のインストールが失敗しました: {result.stderr}")
+                
+                logger.info("依存関係のインストールが正常に完了しました")
             else:
                 logger.info("requirements.txtが見つからないため依存関係のインストールをスキップします")
             

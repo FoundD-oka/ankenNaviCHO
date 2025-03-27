@@ -1332,9 +1332,31 @@ def perform_update_api():
     アップデートを実行するAPI
     """
     try:
+        # アップデート中の自動再起動を防止するために環境変数を設定
+        os.environ['UPDATING'] = '1'
+        # 環境変数ファイルにも書き込み、再起動時にも適用されるようにする
+        dotenv_path = os.path.join(os.getcwd(), '.env')
+        if os.path.exists(dotenv_path):
+            set_key(dotenv_path, 'UPDATING', '1')
+        
+        logger.info("アップデート処理を開始します（自動再起動は無効）")
         result = perform_update()
+        
+        # アップデート完了後、次回起動時のためにフラグをリセット
+        if result.get('success', False):
+            os.environ['UPDATING'] = '0'
+            if os.path.exists(dotenv_path):
+                set_key(dotenv_path, 'UPDATING', '0')
+            logger.info("アップデート処理が完了し、環境変数をリセットしました")
+        
         return jsonify(result)
     except Exception as e:
+        # エラー発生時も環境変数をリセット
+        os.environ['UPDATING'] = '0'
+        dotenv_path = os.path.join(os.getcwd(), '.env')
+        if os.path.exists(dotenv_path):
+            set_key(dotenv_path, 'UPDATING', '0')
+        logger.error(f"アップデート処理中にエラーが発生し、環境変数をリセットしました: {str(e)}")
         return handle_error(e, "アップデート実行エラー", "更新の実行中にエラーが発生しました。")
 
 # アップデートステータス取得エンドポイント
@@ -1554,6 +1576,22 @@ def browser_close():
         }), 500
 
 if __name__ == '__main__':
+    # 更新フラグを確認（起動時に一時的なフラグがある場合は消去）
+    update_in_progress = os.getenv('UPDATING', '0') == '1'
+    
+    # UPDATINGフラグがある場合はログに記録し、.envから削除してクリーンな状態で起動
+    if update_in_progress:
+        logger.info("更新プロセス後の再起動を検出しました。デバッグモードを無効化します。")
+        dotenv_path = os.path.join(os.getcwd(), '.env')
+        if os.path.exists(dotenv_path):
+            with open(dotenv_path, 'r') as f:
+                lines = f.readlines()
+            with open(dotenv_path, 'w') as f:
+                for line in lines:
+                    if not line.strip().startswith('UPDATING='):
+                        f.write(line)
+            logger.info(".envファイルからUPDATINGフラグを削除しました")
+            
     # 起動時に古いデータを削除
     clear_old_job_data()
     
@@ -1562,6 +1600,11 @@ if __name__ == '__main__':
     
     # .envファイルから環境変数PORTを取得
     port = int(os.getenv('PORT', 8000))
-    debug_mode = os.getenv('FLASK_DEBUG', '0') == '1'
+    
+    # デバッグモードの設定（更新中は常に無効）
+    debug_mode = False if update_in_progress else os.getenv('FLASK_DEBUG', '0') == '1'
+    
+    # ログに起動モードを記録
+    logger.info(f"アプリケーションを起動: ポート={port}, デバッグモード={debug_mode}, 更新後の起動={update_in_progress}")
     
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
