@@ -5,27 +5,58 @@ document.addEventListener('DOMContentLoaded', function() {
         window.showToast = function(message, type) {
             console.log(`Toast (${type}): ${message}`);
             
+            // 既存のトーストを削除
+            const existingToasts = document.querySelectorAll('.toast-notification');
+            existingToasts.forEach(toast => {
+                if (document.body.contains(toast)) {
+                    document.body.removeChild(toast);
+                }
+            });
+            
             const toast = document.createElement('div');
             toast.className = `toast-notification toast-${type}`;
-            toast.innerHTML = `
-                <div class="toast-content">
-                    <div class="toast-message">${message}</div>
-                </div>
-            `;
+            toast.innerHTML = message;
             document.body.appendChild(toast);
             
-            // アニメーション用に表示を遅らせる
+            // タイムアウトIDを保存するための属性を追加
+            toast.setAttribute('data-timeout-id', '');
+            
+            console.log('トースト要素を作成しました:', toast);
+            
+            // 表示のタイミングを少し遅らせる
             setTimeout(() => {
                 toast.classList.add('show');
+                console.log('トーストにshowクラスを追加しました');
+                
+                // 一定時間後に非表示
+                const timeoutId = setTimeout(() => {
+                    toast.classList.remove('show');
+                    console.log('トーストからshowクラスを削除しました');
+                    setTimeout(() => {
+                        if (document.body.contains(toast)) {
+                            document.body.removeChild(toast);
+                        }
+                        console.log('トーストを削除しました');
+                    }, 300);
+                }, 3000);
+                
+                // タイムアウトIDを保存
+                toast.setAttribute('data-timeout-id', timeoutId);
+                
+                // トーストをクリックしたら閉じる
+                toast.addEventListener('click', () => {
+                    // 設定したタイムアウトをクリア
+                    clearTimeout(parseInt(toast.getAttribute('data-timeout-id')));
+                    
+                    // トーストを閉じる
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (document.body.contains(toast)) {
+                            document.body.removeChild(toast);
+                        }
+                    }, 300);
+                });
             }, 10);
-            
-            // 3秒後に非表示
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => {
-                    document.body.removeChild(toast);
-                }, 300);
-            }, 3000);
         };
     }
     
@@ -409,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function() {
         style.innerHTML = `
             .toast-notification {
                 position: fixed;
-                bottom: 20px;
+                top: 20px;
                 right: 20px;
                 padding: 12px 20px;
                 border-radius: 4px;
@@ -420,21 +451,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 transition: opacity 0.3s ease-in-out;
                 max-width: 300px;
                 box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+                display: block;
             }
             .toast-notification.show {
                 opacity: 1;
             }
             .toast-success {
                 background-color: #4CAF50;
+                border-left: 4px solid #2E7D32;
             }
             .toast-error {
                 background-color: #F44336;
+                border-left: 4px solid #C62828;
             }
             .toast-warning {
                 background-color: #FF9800;
+                border-left: 4px solid #EF6C00;
             }
             .toast-info {
                 background-color: #2196F3;
+                border-left: 4px solid #1565C0;
             }
         `;
         document.head.appendChild(style);

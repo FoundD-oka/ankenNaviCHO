@@ -306,18 +306,16 @@
     /* トースト通知のスタイル */
     .toast-notification {
         position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 600px;
-        max-width: 90vw;
+        top: 20px;
+        right: 20px;
+        width: auto;
+        max-width: 300px;
         background-color: #fff;
-        box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-        border-radius: 10px;
-        z-index: 10500;
-        padding: 30px;
-        overflow: auto;
-        max-height: 80vh;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+        z-index: 1050;
+        padding: 10px 15px;
+        font-size: 14px;
         display: none;
         opacity: 0;
         transition: opacity 0.3s ease-in-out;
@@ -326,25 +324,28 @@
     .toast-notification.success {
         background: #28a745;
         color: white;
+        border-left: 4px solid #1e7e34;
     }
 
     .toast-notification.error {
         background: #dc3545;
         color: white;
+        border-left: 4px solid #bd2130;
     }
 
     .toast-notification.warning {
         background: #ffc107;
         color: #333;
+        border-left: 4px solid #d39e00;
     }
 
-    .toast-notification.show {
+    .toast-notification.toast-show {
         display: block !important;
         opacity: 1;
     }
 
     /* フィルター設定トースト用スタイル */
-    /* 以下のトースト用スタイルはモーダル化に伴い不要になります 
+    /* 以下のトースト用スタイルはモーダル化に伴い不要になります。削除します。
     .filter-settings-toast {
         max-width: 700px;
         width: 90%;
@@ -426,7 +427,7 @@
     }
 
     /* 自己紹介内容トースト用スタイル */
-    /* 以下のトースト用スタイルはモーダル化に伴い不要になります
+    /* 以下のトースト用スタイルはモーダル化に伴い不要になります。削除します。
     .self-intro-toast {
         max-width: 700px;
         width: 90%;
@@ -459,6 +460,7 @@
 <div class="wrapper">
     <!-- Sidebar -->
     <nav id="sidebar">
+        <!-- サイドバー上部のリンクを削除 -->
         <div class="sidebar-header">
             <h3>案件naviCHO <small style="font-size: 0.6em;">v0.6.2</small></h3>
         </div>
@@ -473,8 +475,8 @@
             </div>
         </div>
         
-        <!-- トップページへ戻るリンク -->
-        <ul class="list-unstyled components">
+        <!-- トップページへ戻るリンクと案件履歴管理リンクを削除 -->
+        <!-- <ul class="list-unstyled components">
             <li>
                 <a href="{{ url_for('top') }}">
                     <i class="fas fa-home"></i> トップページへ戻る
@@ -485,7 +487,7 @@
                     <i class="fas fa-history"></i> 案件履歴管理
                 </a>
             </li>
-        </ul>
+        </ul> -->
         
         <button class="btn btn-primary btn-fetch" id="fetchButton">
             <i class="fas fa-sync-alt"></i> 新規案件を取得
@@ -646,7 +648,7 @@
             </div>
 
             <!-- フィルター設定トースト -->
-            <!-- トーストからモーダルに変更するためコメントアウト
+            <!-- トーストからモーダルに変更するためコメントアウト。HTML内に完全に残さないよう削除します
             <div class="toast-notification filter-settings-toast" style="display: none;">
                 <div class="filter-settings">
                     <h5>フィルター設定</h5>
@@ -664,7 +666,7 @@
             -->
 
             <!-- 自己紹介内容トースト -->
-            <!-- トーストからモーダルに変更するためコメントアウト
+            <!-- トーストからモーダルに変更するためコメントアウト。HTML内に完全に残さないよう削除します
             <div class="toast-notification self-intro-toast" style="display: none;">
                 <div class="self-intro-settings">
                     <h5>自己紹介内容</h5>
@@ -961,7 +963,7 @@
             navigator.sendBeacon('/api/browser_close', new Blob([data], {type: 'application/json'}));
         });
 
-        // フィルター設定を表示する関数
+        // フィルター設定を表示する関数（モーダルを使用）
         function showFilterSettings() {
             try {
                 console.log('showFilterSettings関数が呼び出されました');
@@ -1020,7 +1022,7 @@
                     // モーダルを閉じる
                     closeFilterSettings();
                     
-                    // 成功メッセージを表示
+                    // 成功メッセージを表示（小さなトースト）
                     showToast('フィルター設定を保存しました', 'success');
                 } else {
                     console.error('フィルター設定入力要素が見つかりません');
@@ -1087,10 +1089,10 @@
                     // サーバーに設定を送信
                     updateSettings({ self_introduction: selfIntroValue });
                     
-                    // トーストを閉じる
+                    // モーダルを閉じる
                     closeSelfIntroSettings();
                     
-                    // 成功メッセージを表示
+                    // 成功メッセージを表示（小さなトースト）
                     showToast('自己紹介内容を保存しました', 'success');
                 } else {
                     console.error('自己紹介内容入力要素が見つかりません');
@@ -1281,7 +1283,7 @@
             }
         });
 
-        // API Keyの保存ボタンのイベントリスナーを設定
+        // API設定の保存処理
         document.getElementById('save-api-key')?.addEventListener('click', function() {
             try {
                 const apiKey = document.getElementById('api-key-input').value;
@@ -1302,6 +1304,7 @@
                     $('#apiKeyModal').modal('hide');
                 }
                 
+                // 成功メッセージ（小さなトースト）
                 showToast('API設定を保存しました', 'success');
             } catch (error) {
                 console.error('API Key保存中にエラーが発生:', error);
@@ -1380,10 +1383,11 @@
                     }
                     
                     if (data.status === 'success') {
-                        showToast(data.message, 'success');
+                        // 成功時はトースト表示しない
                         // テーブルを更新
                         updateJobsTable(data.jobs);
                     } else {
+                        // エラー時のみトースト表示
                         showToast('エラー: ' + data.message, 'error');
                     }
                 })
@@ -1620,9 +1624,8 @@
                     });
                 }
                 
-                // 更新完了メッセージ
+                // 更新完了メッセージ（トースト表示しない）
                 console.log('テーブルの更新が完了しました:', jobs.length, '件');
-                showToast(`${jobs.length}件の新しい案件が取得されました`, 'success');
             } catch (error) {
                 console.error('テーブル更新中にエラーが発生:', error);
                 showToast('テーブルの更新に失敗しました: ' + error.message, 'error');
@@ -2086,28 +2089,58 @@
     // トースト表示関数
     function showToast(message, type) {
         console.log('showToast関数が呼び出されました:', message, type);
+        
+        // 既存のトーストを削除
+        const existingToasts = document.querySelectorAll('.toast-notification');
+        existingToasts.forEach(toast => {
+            document.body.removeChild(toast);
+        });
+        
+        // 新しいトーストを作成
         const toast = document.createElement('div');
         toast.className = `toast-notification ${type}`;
         toast.innerHTML = message;
         document.body.appendChild(toast);
         
+        // タイムアウトIDを保存するための属性を追加
+        toast.setAttribute('data-timeout-id', '');
+        
         console.log('トースト要素を作成しました:', toast);
         
         // 表示のタイミングを少し遅らせる
         setTimeout(() => {
-            toast.classList.add('show');
-            console.log('トーストにshowクラスを追加しました');
+            toast.classList.add('toast-show');
+            console.log('トーストにtoast-showクラスを追加しました');
+            
+            // 一定時間後に非表示
+            const timeoutId = setTimeout(() => {
+                toast.classList.remove('toast-show');
+                console.log('トーストからtoast-showクラスを削除しました');
+                setTimeout(() => {
+                    if (document.body.contains(toast)) {
+                        document.body.removeChild(toast);
+                    }
+                    console.log('トーストを削除しました');
+                }, 300);
+            }, 3000);
+            
+            // タイムアウトIDを保存
+            toast.setAttribute('data-timeout-id', timeoutId);
+            
+            // トーストをクリックしたら閉じる
+            toast.addEventListener('click', () => {
+                // 設定したタイムアウトをクリア
+                clearTimeout(parseInt(toast.getAttribute('data-timeout-id')));
+                
+                // トーストを閉じる
+                toast.classList.remove('toast-show');
+                setTimeout(() => {
+                    if (document.body.contains(toast)) {
+                        document.body.removeChild(toast);
+                    }
+                }, 300);
+            });
         }, 10);
-        
-        // 一定時間後に非表示
-        setTimeout(() => {
-            toast.classList.remove('show');
-            console.log('トーストからshowクラスを削除しました');
-            setTimeout(() => {
-                document.body.removeChild(toast);
-                console.log('トーストを削除しました');
-            }, 300);
-        }, 3000);
     }
 </script>
 <script src="{{ url_for('static', filename='js/fixes.js') }}"></script>
