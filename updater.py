@@ -77,18 +77,18 @@ class Updater:
                 if e.response.status_code == 404:
                     # 404エラー：リリースが存在しない
                     logger.error(f"GitHubリリース情報が見つかりません: {e}")
-                    self.status = f"エラー: リリース情報が見つかりません"
+                    self.status = f"リリース情報が見つかりません"
                     self.update_available = False
                     self.latest_version = None
                 else:
                     # その他のHTTPエラー
                     logger.error(f"GitHub APIアクセスエラー: {e}")
-                    self.status = f"エラー: GitHub APIアクセスエラー: {e}"
+                    self.status = f"GitHub APIアクセスエラー: {e}"
                     raise e
             except requests.exceptions.RequestException as e:
                 # ネットワーク関連エラー
                 logger.error(f"ネットワークエラー: {e}")
-                self.status = f"エラー: ネットワーク接続エラー: {e}"
+                self.status = f"ネットワーク接続エラー: {e}"
                 self.update_available = False
                 self.latest_version = None
             
@@ -297,13 +297,20 @@ class Updater:
     
     def get_status(self):
         """現在の更新ステータスを取得"""
-        return {
+        status_data = {
             "progress": self.progress,
             "status": self.status,
             "current_version": self.current_version,
             "latest_version": self.latest_version,
             "update_available": self.update_available
         }
+        
+        # 新しいバージョンが利用可能な場合は、成功ステータスを追加
+        if self.update_available:
+            status_data["status"] = "success"
+            status_data["message"] = f"新しいバージョン {self.latest_version} が利用可能です"
+        
+        return status_data
 
 # グローバルインスタンス
 updater = Updater()

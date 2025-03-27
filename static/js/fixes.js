@@ -83,11 +83,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         return response.json();
                     })
                     .then(data => {
-                        if (data.status === 'success') {
+                        if (data.status === 'success' || data.update_available === true) {
                             if (data.update_available) {
                                 // 更新が利用可能な場合
-                                statusMsg.textContent = 
-                                    `新しいバージョン ${data.latest_version} が利用可能です（現在のバージョン: ${data.current_version}）`;
+                                const message = data.message || `新しいバージョン ${data.latest_version} が利用可能です（現在のバージョン: ${data.current_version}）`;
+                                statusMsg.textContent = message;
                                 document.getElementById('update-start-btn').style.display = 'block';
                             } else {
                                 // 更新がない場合
