@@ -582,7 +582,7 @@ def auth_callback():
                 user = User(user_response.user.id, user_response.user.email, avatar_url)
                 login_user(user)
                 flash('ログインしました', 'success')
-                return redirect(url_for('index'))
+                return redirect(url_for('top'))
             except Exception as e:
                 print(f"Auth error: {str(e)}")
                 flash('認証エラーが発生しました', 'error')
@@ -623,6 +623,30 @@ def logout():
 @app.route('/')
 @auth_required
 def index():
+    # トップページにリダイレクト
+    return redirect(url_for('top'))
+
+# トップページ（認証必須）
+@app.route('/top')
+@auth_required
+def top():
+    # トップページを表示
+    return render_template('top.html')
+
+# サービス別案件一覧ページ（認証必須）
+@app.route('/jobs/<service>')
+@auth_required
+def service_jobs(service):
+    if service not in ['crowdworks', 'coconala']:
+        flash('無効なサービスが指定されました', 'error')
+        return redirect(url_for('top'))
+    
+    # 現在はココナラは未対応
+    if service == 'coconala':
+        flash('ココナラの案件一覧は現在準備中です', 'warning')
+        return redirect(url_for('top'))
+    
+    # クラウドワークスの場合は従来の案件一覧を表示
     jobs = get_latest_filtered_json()
     checks = load_checks()
     settings = load_settings()
@@ -630,7 +654,7 @@ def index():
     for job in jobs:
         if 'detail_description' in job:
             job['detail_description'] = job['detail_description'].replace('\n', '<br>')
-    return render_template('index.html', jobs=jobs, checks=checks, settings=settings)
+    return render_template('index.html', jobs=jobs, checks=checks, settings=settings, service=service)
 
 @app.route('/update_check', methods=['POST'])
 @auth_required
@@ -892,6 +916,12 @@ def fetch_new_data():
             user_message="データの取得中に予期しないエラーが発生しました。",
             status_code=500
         )
+
+@app.route('/api/check_auth', methods=['POST'])
+@auth_required
+def api_check_auth():
+    # 既存の check_auth 関数を呼び出す
+    return check_auth()
 
 @app.route('/check_auth', methods=['POST'])
 @auth_required

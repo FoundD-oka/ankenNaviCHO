@@ -1,6 +1,14 @@
 {% extends "bootstrap/base.html" %}
 
-{% block title %}クラウドワークス案件一覧{% endblock %}
+{% block title %}
+    {% if service == 'crowdworks' %}
+    クラウドワークス案件一覧
+    {% elif service == 'coconala' %}
+    ココナラ案件一覧
+    {% else %}
+    案件一覧
+    {% endif %}
+{% endblock %}
 
 {% block styles %}
 {{super()}}
@@ -436,21 +444,36 @@
     <!-- Sidebar -->
     <nav id="sidebar">
         <div class="sidebar-header">
-            <h3>案件naviCHO <small style="font-size: 0.6em;">v0.5.3</small></h3>
+            <h3>案件naviCHO <small style="font-size: 0.6em;">v0.5.4</small></h3>
         </div>
-
-        <!-- ユーザーアバター -->
+        
         <div class="user-info">
-            <div class="user-avatar-container" id="user-avatar-container">
-                <img src="{{ current_user.avatar_url }}" alt="User avatar" class="user-avatar">
-                <div class="logout-toast" id="logout-toast">ログアウト</div>
+            <div class="user-avatar-container" id="userAvatarContainer">
+                <img src="{{ current_user.avatar_url }}" alt="User" class="user-avatar" id="userAvatar">
+                <div class="logout-toast" id="logoutToast">ログアウト</div>
                 <form id="logout-form" action="{{ url_for('logout') }}" method="POST" style="display: none;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 </form>
             </div>
         </div>
         
-        <button class="btn btn-primary btn-fetch">新規情報の取得</button>
+        <!-- トップページへ戻るリンク -->
+        <ul class="list-unstyled components">
+            <li>
+                <a href="{{ url_for('top') }}">
+                    <i class="fas fa-home"></i> トップページへ戻る
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('job_history_page') }}">
+                    <i class="fas fa-history"></i> 案件履歴管理
+                </a>
+            </li>
+        </ul>
+        
+        <button class="btn btn-primary btn-fetch" id="fetchButton">
+            <i class="fas fa-sync-alt"></i> 新規案件を取得
+        </button>
         
         <!-- プログレスバーを追加（最初から領域を確保） -->
         <div class="progress-container" style="padding: 10px 20px; visibility: hidden;" aria-busy="true" aria-describedby="progress-status">
@@ -1632,15 +1655,15 @@
         });
         
         // ユーザーアバターのクリックイベント
-        document.getElementById('user-avatar-container')?.addEventListener('click', function() {
-            const logoutToast = document.getElementById('logout-toast');
+        document.getElementById('userAvatarContainer')?.addEventListener('click', function() {
+            const logoutToast = document.getElementById('logoutToast');
             if (logoutToast) {
                 logoutToast.style.display = logoutToast.style.display === 'block' ? 'none' : 'block';
             }
         });
         
         // ログアウトトーストのクリックイベント
-        document.getElementById('logout-toast')?.addEventListener('click', function() {
+        document.getElementById('logoutToast')?.addEventListener('click', function() {
             document.getElementById('logout-form').submit();
         });
         
