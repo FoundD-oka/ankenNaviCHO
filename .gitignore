@@ -10,6 +10,8 @@
 *.pyo
 *.pyd
 .DS_Store
+chromedriver
+**/chromedriver
 
 # ビルド関連
 /build/
