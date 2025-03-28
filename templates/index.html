@@ -407,6 +407,9 @@
         width: 100%;
         height: 32px;
         border-radius: 4px;
+        display: block;
+        -webkit-appearance: none;
+        appearance: none;
     }
     
     .progress-container progress::-webkit-progress-bar {
@@ -424,6 +427,13 @@
         background-color: #007bff;
         border-radius: 4px;
         transition: width 0.3s ease;
+    }
+
+    /* プログレスバーの特別なスタイリングを追加 */
+    #fetch-progress-container .progress {
+        background-color: #f5f5f5;
+        border: 1px solid #ddd;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,.1);
     }
 
     /* 自己紹介内容トースト用スタイル */
@@ -494,12 +504,15 @@
         </button>
         
         <!-- プログレスバーを追加（最初から領域を確保） -->
-        <div class="progress-container" style="padding: 10px 20px; visibility: hidden;" aria-busy="true" aria-describedby="progress-status">
+        <div id="fetch-progress-container" class="progress-container" style="padding: 10px 20px; display: none; background-color: rgba(0,0,0,0.1);" aria-busy="true" aria-describedby="progress-status">
             <div class="progress-wrapper" style="position: relative;">
-                <progress id="progress-bar" class="progress" value="0" max="100" aria-label="データ取得中..."></progress>
-                <span id="progress-percentage" class="progress-percentage">0/0</span>
+                <!-- Progress要素に加えて、DIVでの実装も用意（互換性のため） -->
+                <div class="progress" style="height: 32px; background-color: #f5f5f5; border-radius: 4px; overflow: hidden;">
+                    <div id="progress-bar-div" class="progress-bar" role="progressbar" style="width: 0%; height: 100%; background-color: #007bff; transition: width 0.3s ease;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <progress id="progress-bar" class="progress" value="0" max="100" style="width: 100%; height: 32px; display: none;" aria-label="データ取得中..."></progress>
             </div>
-            <small id="progress-status" class="progress-status text-light" style="display: block; text-align: center; margin-top: 5px;">処理中...</small>
+            <small id="progress-status" class="progress-status text-light" style="display: block; text-align: center; margin-top: 5px; font-weight: bold;">処理中...</small>
         </div>
 
         <ul class="list-unstyled components">
@@ -1359,11 +1372,80 @@
         
         // 新規情報の取得ボタンのイベントリスナーを設定
         document.querySelector('.btn-fetch')?.addEventListener('click', function() {
+            const fetchButton = this; // ボタン要素を保持
+            const progressContainer = document.getElementById('fetch-progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            const progressBarDiv = document.getElementById('progress-bar-div');
+            const progressStatus = document.getElementById('progress-status');
+            let dummyProgress = 0; // ダミーの進捗率
+            let progressInterval = null; // プログレスバーのタイマーID
+
+            // 既に処理中の場合は何もしない
+            if (fetchButton.classList.contains('btn-disabled')) {
+                return;
+            }
+
+            // 処理中はボタンを無効化
+            fetchButton.classList.add('btn-disabled');
+            fetchButton.disabled = true;
+
             try {
-                // プログレスバーを表示
-                const progressContainer = document.querySelector('.progress-container');
-                if (progressContainer) {
-                    progressContainer.style.visibility = 'visible';
+                // プログレスバーを表示し、初期化
+                if (progressContainer && (progressBar || progressBarDiv) && progressStatus) {
+                    if (progressBar) progressBar.value = 0;
+                    if (progressBarDiv) {
+                        progressBarDiv.style.width = '0%';
+                        progressBarDiv.setAttribute('aria-valuenow', '0');
+                    }
+                    
+                    progressStatus.textContent = '新着情報の取得中...'; // 初期テキスト
+                    progressContainer.style.display = 'block';
+                    progressContainer.setAttribute('aria-busy', 'true');
+                    progressStatus.setAttribute('aria-live', 'polite');
+
+                    console.log("プログレスバー初期化完了");
+
+                    // ダミープログレスを開始
+                    const estimatedDuration = 10000; // 推定時間 (10秒) - 必要に応じて調整
+                    const intervalTime = 100; // 更新間隔 (100ms)
+                    const totalSteps = estimatedDuration / intervalTime;
+                    const increment = 99 / totalSteps; // 99%まで進むように調整
+
+                    console.log("setInterval開始");
+                    progressInterval = setInterval(() => {
+                        dummyProgress += increment;
+                        console.log("dummyProgress:", dummyProgress);
+                        
+                        if (dummyProgress >= 99) {
+                            dummyProgress = 99; // 100%手前で止める
+                        }
+                        
+                        // 進捗値を明示的に設定
+                        const roundedValue = Math.floor(dummyProgress);
+                        
+                        // progress要素の更新
+                        if (progressBar) {
+                            progressBar.value = roundedValue;
+                            progressBar.setAttribute('aria-valuenow', roundedValue);
+                        }
+                        
+                        // div要素の更新（より広い互換性のため）
+                        if (progressBarDiv) {
+                            progressBarDiv.style.width = `${roundedValue}%`;
+                            progressBarDiv.setAttribute('aria-valuenow', roundedValue);
+                        }
+                        
+                        // 進捗値をConsoleにも表示（デバッグ用）
+                        console.log(`現在の進捗: ${roundedValue}%`);
+
+                        // 進捗に応じてテキストを変更 (70%を超えたら)
+                        if (dummyProgress > 70 && progressStatus.textContent === '新着情報の取得中...') {
+                            progressStatus.textContent = '案件の仕分け中...';
+                            console.log("テキスト変更: 案件の仕分け中...");
+                        }
+                    }, intervalTime);
+                } else {
+                    console.error("プログレスバー要素が見つかりません");
                 }
                 
                 // 新規データ取得APIを呼び出し
@@ -1375,33 +1457,155 @@
                     },
                     body: JSON.stringify({})
                 })
-                .then(response => response.json())
+                .then(response => {
+                    // レスポンスステータスチェック
+                    if (!response.ok) {
+                        // サーバーエラーの場合、エラーメッセージを取得試行
+                        return response.json().then(errData => {
+                            throw new Error(errData.message || `サーバーエラーが発生しました (${response.status})`);
+                        }).catch(() => {
+                            // JSON解析失敗時
+                            throw new Error(`サーバーエラーが発生しました (${response.status})`);
+                        });
+                    }
+                    return response.json(); // 正常時はJSONを解析
+                })
                 .then(data => {
-                    // プログレスバーを非表示
-                    if (progressContainer) {
-                        progressContainer.style.visibility = 'hidden';
-                    }
+                    console.log("APIレスポンス受信:", data);
                     
-                    if (data.status === 'success') {
-                        // 成功時はトースト表示しない
-                        // テーブルを更新
-                        updateJobsTable(data.jobs);
-                    } else {
-                        // エラー時のみトースト表示
-                        showToast('エラー: ' + data.message, 'error');
+                    // ダミープログレスを停止
+                    if (progressInterval) {
+                        clearInterval(progressInterval);
+                        progressInterval = null;
+                        console.log("プログレスバー停止");
                     }
+
+                    let finalStatusText = '';
+                    if (data.status === 'success') {
+                        finalStatusText = '取得完了';
+                        // 成功時に100%にする
+                        if (progressBar) {
+                            progressBar.value = 100;
+                            progressBar.setAttribute('aria-valuenow', '100');
+                        }
+                        if (progressBarDiv) {
+                            progressBarDiv.style.width = '100%';
+                            progressBarDiv.setAttribute('aria-valuenow', '100');
+                        }
+                        updateJobsTable(data.jobs);
+                        showToast(`案件データを ${data.jobs ? data.jobs.length : 0} 件更新しました`, 'success'); // 完了メッセージ
+                    } else {
+                        finalStatusText = 'エラー発生';
+                        // エラーでもプログレスバーは完了状態に見せる場合が多い
+                        if (progressBar) {
+                            progressBar.value = 100;
+                            progressBar.setAttribute('aria-valuenow', '100');
+                        }
+                        if (progressBarDiv) {
+                            progressBarDiv.style.width = '100%';
+                            progressBarDiv.setAttribute('aria-valuenow', '100');
+                        }
+                        showToast('エラー: ' + (data.message || '不明なエラー'), 'error');
+                    }
+                    progressStatus.textContent = finalStatusText;
+                    console.log("ステータス更新:", finalStatusText);
+
+                    // 少し待ってからプログレスバーを非表示にし、要素をリセット
+                    setTimeout(() => {
+                        if (progressContainer && progressBar && progressStatus) {
+                            progressContainer.style.display = 'none';
+                            progressContainer.setAttribute('aria-busy', 'false');
+                            progressBar.value = 0; // 次回のためにリセット
+                            progressStatus.textContent = '処理待機中...'; // テキストをリセット
+                            progressBar.setAttribute('aria-valuenow', '0');
+                            progressStatus.removeAttribute('aria-live');
+                            console.log("プログレスバー非表示");
+                        }
+                        // ボタンを有効化
+                        fetchButton.classList.remove('btn-disabled');
+                        fetchButton.disabled = false;
+                    }, 1500); // 1.5秒後に非表示
                 })
                 .catch(error => {
-                    // プログレスバーを非表示
-                    if (progressContainer) {
-                        progressContainer.style.visibility = 'hidden';
-                    }
                     console.error('データ取得中にエラーが発生:', error);
+                    
+                    // ダミープログレスを停止
+                    if (progressInterval) {
+                        clearInterval(progressInterval);
+                        progressInterval = null;
+                    }
+
+                    // エラーメッセージを表示
+                    if (progressStatus) {
+                        progressStatus.textContent = 'エラー発生';
+                    }
+                    
                     showToast('データ取得に失敗しました: ' + error.message, 'error');
+
+                    // エラー発生時もプログレスバーは100%にして、少し待ってから隠す
+                    if (progressBar) {
+                        progressBar.value = 100;
+                        progressBar.setAttribute('aria-valuenow', '100');
+                    }
+                    if (progressBarDiv) {
+                        progressBarDiv.style.width = '100%';
+                        progressBarDiv.setAttribute('aria-valuenow', '100');
+                    }
+
+                    // 少し待ってからプログレスバーを非表示にし、要素をリセット
+                    setTimeout(() => {
+                        if (progressContainer) {
+                            progressContainer.style.display = 'none';
+                            progressContainer.setAttribute('aria-busy', 'false');
+                            if (progressBar) {
+                                progressBar.value = 0;
+                                progressBar.setAttribute('aria-valuenow', '0');
+                            }
+                            if (progressBarDiv) {
+                                progressBarDiv.style.width = '0%';
+                                progressBarDiv.setAttribute('aria-valuenow', '0');
+                            }
+                            progressStatus.textContent = '処理待機中...';
+                            progressStatus.removeAttribute('aria-live');
+                            console.log("プログレスバー非表示");
+                        }
+                        // ボタンを有効化
+                        fetchButton.classList.remove('btn-disabled');
+                        fetchButton.disabled = false;
+                    }, 1500);
                 });
             } catch (error) {
-                console.error('データ取得処理中にエラーが発生:', error);
-                showToast('データ取得に失敗しました: ' + error.message, 'error');
+                console.error('データ取得処理の開始中にエラーが発生:', error);
+                
+                // ダミープログレスを停止
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
+                
+                // エラー時もプログレスバーを非表示にする等の後始末
+                if (progressContainer) {
+                    progressContainer.style.display = 'none';
+                    progressContainer.setAttribute('aria-busy', 'false');
+                    if (progressBar) {
+                        progressBar.value = 0;
+                        progressBar.setAttribute('aria-valuenow', '0');
+                    }
+                    if (progressBarDiv) {
+                        progressBarDiv.style.width = '0%';
+                        progressBarDiv.setAttribute('aria-valuenow', '0');
+                    }
+                    if (progressStatus) {
+                        progressStatus.textContent = '処理待機中...';
+                        progressStatus.removeAttribute('aria-live');
+                    }
+                }
+                
+                // ボタンを有効化
+                fetchButton.classList.remove('btn-disabled');
+                fetchButton.disabled = false;
+
+                showToast('データ取得処理を開始できませんでした: ' + error.message, 'error');
             }
         });
         
