@@ -23,6 +23,47 @@ from openai import OpenAI
 from updater import check_for_updates, perform_update, get_update_status
 import atexit
 
+# アプリケーション環境の初期化関数
+def initialize_app_environment():
+    """アプリケーションの初期環境を設定する"""
+    logger.info("アプリケーション環境の初期化を開始")
+    
+    # 必要なディレクトリの作成
+    required_dirs = ['crawled_data', 'logs', 'backups', 'drivers']
+    for dir_name in required_dirs:
+        if not os.path.exists(dir_name):
+            logger.info(f"{dir_name}ディレクトリが存在しないため作成します")
+            os.makedirs(dir_name)
+    
+    # 設定ファイルの初期化
+    settings_file = 'crawled_data/settings.json'
+    if not os.path.exists(settings_file):
+        default_settings = DEFAULT_SETTINGS.copy()
+        logger.info(f"デフォルト設定ファイルを作成します: {settings_file}")
+        with open(settings_file, 'w', encoding='utf-8') as f:
+            json.dump(default_settings, f, ensure_ascii=False, indent=2)
+    
+    # checked_jobs.jsonの初期化
+    checked_jobs_file = 'crawled_data/checked_jobs.json'
+    if not os.path.exists(checked_jobs_file):
+        logger.info(f"チェック済み案件ファイルを初期化します: {checked_jobs_file}")
+        with open(checked_jobs_file, 'w', encoding='utf-8') as f:
+            json.dump({}, f, ensure_ascii=False)
+    
+    # prompt.txtの初期化
+    if not os.path.exists(PROMPT_FILE):
+        logger.info(f"フィルタープロンプトファイルを初期化します: {PROMPT_FILE}")
+        prompt_config = {
+            'model': 'gpt-4o-mini',
+            'prompt': '',
+            'temperature': 0,
+            'max_tokens': 100
+        }
+        with open(PROMPT_FILE, 'w', encoding='utf-8') as f:
+            json.dump(prompt_config, f, ensure_ascii=False, indent=2)
+    
+    logger.info("アプリケーション環境の初期化が完了しました")
+
 # ChromeDriver自動管理モジュールをインポート
 import chromedriver_manager
 
@@ -806,19 +847,6 @@ def fetch_new_data():
                 status_code=500
             )
         
-        # crawled_dataディレクトリの存在確認と作成
-        try:
-            if not os.path.exists('crawled_data'):
-                logger.info("crawled_dataディレクトリが存在しないため作成します")
-                os.makedirs('crawled_data')
-        except Exception as e:
-            return handle_error(
-                e,
-                error_type="ディレクトリエラー",
-                user_message="データ保存ディレクトリの作成に失敗しました。",
-                status_code=500
-            )
-        
         # Pythonインタープリタのパスを取得
         python_executable = sys.executable
         
@@ -1591,7 +1619,10 @@ if __name__ == '__main__':
                     if not line.strip().startswith('UPDATING='):
                         f.write(line)
             logger.info(".envファイルからUPDATINGフラグを削除しました")
-            
+    
+    # アプリケーション環境を初期化
+    initialize_app_environment()
+    
     # 起動時に古いデータを削除
     clear_old_job_data()
     

@@ -554,7 +554,8 @@ class CrowdWorksCrawler:
             logger.warning("保存する案件データがありません")
             return
 
-        # 保存先ディレクトリの作成
+        # 保存先ディレクトリの作成（アプリケーション初期化で既に作成されている可能性がありますが、
+        # クローラーが単体で実行される場合のために残しています）
         save_dir = Path("crawled_data")
         save_dir.mkdir(exist_ok=True)
 
@@ -575,6 +576,8 @@ class CrowdWorksCrawler:
 
     def load_previous_jobs(self) -> Dict[str, Dict]:
         """前回のクロール結果を読み込む"""
+        # アプリケーション初期化で既に作成されている可能性がありますが、
+        # クローラーが単体で実行される場合のためにチェックします
         save_dir = Path("crawled_data")
         if not save_dir.exists():
             return {}
@@ -653,11 +656,6 @@ if __name__ == "__main__":
             sys.exit(1)
         
         logger.info(f"認証情報: email={bool(email)}, password={bool(password)}")
-        
-        # crawled_dataディレクトリの存在確認
-        if not os.path.exists('crawled_data'):
-            logger.info("crawled_dataディレクトリが存在しないため作成します")
-            os.makedirs('crawled_data')
         
         # クローラーを実行
         logger.info("クローラーを初期化しています...")
