@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>エラー - ChromeDriver設定</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 2rem;
+        }
+        .error-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+        }
+        .error-icon {
+            font-size: 4rem;
+            color: #dc3545;
+            margin-bottom: 1rem;
+        }
+        .solution-card {
+            margin-top: 1.5rem;
+            border-left: 4px solid #0d6efd;
+        }
+        .manual-steps {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        .manual-steps ol {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-container">
+            <div class="text-center mb-4">
+                <div class="error-icon">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <h1 class="h3">ChromeDriver設定エラー</h1>
+                <p class="text-muted">アプリケーションの実行に必要なChromeDriverの設定に問題が発生しました。</p>
+            </div>
+
+            <div class="alert alert-danger">
+                <h5>エラー詳細:</h5>
+                <p>{{ error_message }}</p>
+            </div>
+
+            <div class="card solution-card">
+                <div class="card-body">
+                    <h5 class="card-title">自動修復を試みる</h5>
+                    <p class="card-text">以下のボタンをクリックして、ChromeDriverの自動設定を再試行できます。</p>
+                    <form action="/api/chromedriver/update" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-primary">ChromeDriverを再設定する</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="manual-steps">
+                <h5>手動設定手順:</h5>
+                <p>自動設定が失敗する場合は、以下の手順で手動設定を行ってください:</p>
+                <ol>
+                    <li>お使いのChromeブラウザのバージョンを確認します。
+                        <ul>
+                            <li>Chromeを開き、右上の「︙」メニュー > ヘルプ > Google Chromeについて を選択</li>
+                        </ul>
+                    </li>
+                    <li><a href="https://chromedriver.chromium.org/downloads" target="_blank">ChromeDriverのダウンロードページ</a>から、お使いのChromeバージョンに対応するドライバーをダウンロードします。</li>
+                    <li>ダウンロードしたZIPファイルを解凍します。</li>
+                    <li>解凍したchromedriver（またはchromedriver.exe）ファイルをアプリケーションのルートディレクトリに配置します。</li>
+                    <li>ファイルに実行権限を付与します（macOSの場合）:
+                        <pre><code>chmod +x ./chromedriver</code></pre>
+                    </li>
+                    <li>アプリケーションを再起動します。</li>
+                </ol>
+            </div>
+
+            <div class="mt-4 text-center">
+                <a href="/" class="btn btn-outline-secondary">ホームに戻る</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css"></script>
+</body>
+</html> 

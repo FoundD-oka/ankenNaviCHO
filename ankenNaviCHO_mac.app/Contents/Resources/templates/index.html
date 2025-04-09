@@ -1,0 +1,2351 @@
+{% extends "bootstrap/base.html" %}
+
+{% block title %}
+    {% if service == 'crowdworks' %}
+    クラウドワークス案件一覧
+    {% elif service == 'coconala' %}
+    ココナラ案件一覧
+    {% else %}
+    案件一覧
+    {% endif %}
+{% endblock %}
+
+{% block styles %}
+{{super()}}
+<style>
+    .wrapper {
+        display: flex;
+        width: 100%;
+    }
+    
+    #sidebar {
+        min-width: 250px;
+        max-width: 250px;
+        min-height: 100vh;
+        background: #343a40;
+        color: #fff;
+        transition: all 0.3s;
+    }
+    
+    #sidebar .sidebar-header {
+        padding: 20px;
+        background: #2c3136;
+    }
+    
+    #sidebar ul.components {
+        padding: 20px 0;
+        border-bottom: 1px solid #47748b;
+    }
+    
+    #sidebar ul li a {
+        padding: 10px;
+        font-size: 1.1em;
+        display: block;
+        color: #fff;
+        text-decoration: none;
+    }
+    
+    #sidebar ul li a:hover {
+        background: #2c3136;
+    }
+    
+    #sidebar .btn-fetch {
+        margin: 15px 20px;
+        width: calc(100% - 40px);
+    }
+    
+    #content {
+        width: 100%;
+        padding: 20px;
+        min-height: 100vh;
+        transition: all 0.3s;
+    }
+    
+    .user-info {
+        padding: 10px 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #2c3136;
+        position: relative;
+    }
+    
+    .user-avatar-container {
+        cursor: pointer;
+    }
+
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        transition: transform 0.2s;
+    }
+
+    .user-avatar:hover {
+        transform: scale(1.1);
+    }
+
+    .logout-toast {
+        position: absolute;
+        top: 100%;
+        background: #fff;
+        color: #333;
+        padding: 8px 16px;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        z-index: 1000;
+        cursor: pointer;
+        display: none;
+        animation: fadeIn 0.2s ease-in-out;
+    }
+
+    .logout-toast:hover {
+        background: #f8f9fa;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .table-container {
+        margin-top: 2rem;
+        margin-bottom: 2rem;
+    }
+    .check-column {
+        width: 50px;
+    }
+    .title-column {
+        min-width: 300px;
+    }
+    .budget-column {
+        width: 150px;
+    }
+    .client-column {
+        width: 150px;
+    }
+    .date-column {
+        width: 120px;
+    }
+    .reason-column {
+        width: 200px;
+    }
+    .toggle-details {
+        padding: 0.25rem 0.5rem;
+        margin-left: 0.5rem;
+        color: #007bff;
+        background: none;
+        border: 1px solid #007bff;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .toggle-details:hover {
+        background-color: #007bff;
+        color: #fff;
+    }
+    .modal-body {
+        white-space: pre-wrap;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+    .modal-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-right: 2rem;
+    }
+    #sidebar .form-group {
+        padding: 10px 20px;
+        color: #fff;
+    }
+
+    #sidebar .form-group label {
+        color: #fff;
+        margin-bottom: 5px;
+    }
+
+    #sidebar .form-control {
+        background-color: #2c3136;
+        border: 1px solid #47748b;
+        color: #fff;
+    }
+
+    #sidebar .form-control:focus {
+        background-color: #2c3136;
+        color: #fff;
+        border-color: #007bff;
+    }
+
+    #sidebar input[type="number"] {
+        width: 100%;
+    }
+
+    #sidebar .model-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+
+    #sidebar .model-label-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 5px;
+    }
+
+    #sidebar .api-key-btn {
+        color: #adb5bd;
+        background: none;
+        border: none;
+        padding: 0 5px;
+        font-size: 0.9em;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    #sidebar .api-key-btn:hover {
+        color: #ced4da;
+    }
+
+    .api-key-modal .modal-content {
+        background-color: #343a40;
+        color: #fff;
+    }
+
+    .api-key-modal .modal-header {
+        border-bottom: 1px solid #47748b;
+    }
+
+    .api-key-modal .modal-footer {
+        border-top: 1px solid #47748b;
+    }
+
+    .api-key-modal .form-control {
+        background-color: #2c3136;
+        border: 1px solid #47748b;
+        color: #fff;
+    }
+
+    .api-key-modal .form-control:focus {
+        background-color: #2c3136;
+        color: #fff;
+        border-color: #007bff;
+    }
+
+    .filter-settings {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+
+    .filter-settings textarea {
+        width: 100%;
+        min-height: 200px;
+        resize: vertical;
+    }
+
+    #content .view-container {
+        display: none;
+    }
+
+    #content .view-container.active {
+        display: block;
+    }
+
+    .btn-disabled {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.65;
+    }
+
+    .btn-disabled:hover {
+        background-color: #6c757d;
+        border-color: #6c757d;
+    }
+
+    .detail-column {
+        width: 100px;
+        text-align: center;
+    }
+    
+    .btn-outline-info {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .job-details th {
+        background-color: #f8f9fa;
+    }
+    
+    .modal-description {
+        white-space: pre-wrap;
+    }
+
+    .progress-wrapper {
+        position: relative;
+        width: 100%;
+    }
+    
+    .progress-percentage {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #1a237e;
+        font-weight: bold;
+        text-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
+        font-size: 1.2rem;
+        z-index: 1;
+        background: rgba(255, 255, 255, 0.7);
+        padding: 0 8px;
+        border-radius: 3px;
+    }
+
+    /* トースト通知のスタイル */
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: auto;
+        max-width: 300px;
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+        z-index: 1050;
+        padding: 10px 15px;
+        font-size: 14px;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+    }
+
+    .toast-notification.success {
+        background: #28a745;
+        color: white;
+        border-left: 4px solid #1e7e34;
+    }
+
+    .toast-notification.error {
+        background: #dc3545;
+        color: white;
+        border-left: 4px solid #bd2130;
+    }
+
+    .toast-notification.warning {
+        background: #ffc107;
+        color: #333;
+        border-left: 4px solid #d39e00;
+    }
+
+    .toast-notification.toast-show {
+        display: block !important;
+        opacity: 1;
+    }
+
+    /* フィルター設定トースト用スタイル */
+    /* 以下のトースト用スタイルはモーダル化に伴い不要になります。削除します。
+    .filter-settings-toast {
+        max-width: 700px;
+        width: 90%;
+        max-height: 300px;
+        overflow-y: auto;
+        background: rgba(255, 255, 255, 0.98);
+        color: #333;
+        padding: 15px 20px;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        display: none;
+        position: fixed;
+        left: 270px;
+        z-index: 10000;
+        border-radius: 8px;
+        backdrop-filter: blur(5px);
+        transform: none;
+    }
+
+    .filter-settings-toast.show {
+        display: block !important;
+        opacity: 1;
+    }
+
+    .filter-settings-toast .filter-settings {
+        background: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .filter-settings-toast textarea {
+        min-height: 125px;
+        font-size: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .filter-settings-toast h5 {
+        font-size: 2.0rem;
+        font-weight: bold;
+        margin-bottom: 0.8rem;
+    }
+
+    .filter-settings-toast .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .filter-settings-toast label {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        font-size: 1.6rem;
+    }
+
+    .filter-settings-toast .text-muted {
+        margin-bottom: 0.8rem;
+        font-size: 1.4rem;
+    }
+    */
+    
+    .progress-container progress {
+        width: 100%;
+        height: 32px;
+        border-radius: 4px;
+        display: block;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    
+    .progress-container progress::-webkit-progress-bar {
+        background-color: #f5f5f5;
+        border-radius: 4px;
+    }
+    
+    .progress-container progress::-webkit-progress-value {
+        background-color: #007bff;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    
+    .progress-container progress::-moz-progress-bar {
+        background-color: #007bff;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+
+    /* プログレスバーの特別なスタイリングを追加 */
+    #fetch-progress-container .progress {
+        background-color: #f5f5f5;
+        border: 1px solid #ddd;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,.1);
+    }
+
+    /* 自己紹介内容トースト用スタイル */
+    /* 以下のトースト用スタイルはモーダル化に伴い不要になります。削除します。
+    .self-intro-toast {
+        max-width: 700px;
+        width: 90%;
+        max-height: 600px;
+        background: rgba(255, 255, 255, 0.98);
+        color: #333;
+        padding: 15px 20px;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        position: fixed;
+        display: none;
+        left: 270px;
+        z-index: 10000;
+        border-radius: 8px;
+        backdrop-filter: blur(5px);
+        transform: none;
+    }
+
+    .self-intro-toast.show {
+        display: block !important;
+        opacity: 1;
+    }
+    */
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- JavaScriptに渡す設定データ -->
+<script id="settings-data" type="application/json" data-settings='{{ settings|tojson }}' style="display: none;"></script>
+
+<div class="wrapper">
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <!-- サイドバー上部のリンクを削除 -->
+        <div class="sidebar-header">
+            <h3>案件naviCHO <small style="font-size: 0.6em;">v0.6.2</small></h3>
+        </div>
+        
+        <div class="user-info">
+            <div class="user-avatar-container" id="userAvatarContainer">
+                <img src="{{ current_user.avatar_url }}" alt="User" class="user-avatar" id="userAvatar">
+                <div class="logout-toast" id="logoutToast">ログアウト</div>
+                <form id="logout-form" action="{{ url_for('logout') }}" method="POST" style="display: none;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                </form>
+            </div>
+        </div>
+        
+        <!-- トップページへ戻るリンクと案件履歴管理リンクを削除 -->
+        <!-- <ul class="list-unstyled components">
+            <li>
+                <a href="{{ url_for('top') }}">
+                    <i class="fas fa-home"></i> トップページへ戻る
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('job_history_page') }}">
+                    <i class="fas fa-history"></i> 案件履歴管理
+                </a>
+            </li>
+        </ul> -->
+        
+        <button class="btn btn-primary btn-fetch" id="fetchButton">
+            <i class="fas fa-sync-alt"></i> 新規案件を取得
+        </button>
+        
+        <!-- プログレスバーを追加（最初から領域を確保） -->
+        <div id="fetch-progress-container" class="progress-container" style="padding: 10px 20px; display: none; background-color: rgba(0,0,0,0.1);" aria-busy="true" aria-describedby="progress-status">
+            <div class="progress-wrapper" style="position: relative;">
+                <!-- Progress要素に加えて、DIVでの実装も用意（互換性のため） -->
+                <div class="progress" style="height: 32px; background-color: #f5f5f5; border-radius: 4px; overflow: hidden;">
+                    <div id="progress-bar-div" class="progress-bar" role="progressbar" style="width: 0%; height: 100%; background-color: #007bff; transition: width 0.3s ease;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <progress id="progress-bar" class="progress" value="0" max="100" style="width: 100%; height: 32px; display: none;" aria-label="データ取得中..."></progress>
+            </div>
+            <small id="progress-status" class="progress-status text-light" style="display: block; text-align: center; margin-top: 5px; font-weight: bold;">処理中...</small>
+        </div>
+
+        <ul class="list-unstyled components">
+            <li>
+                <a href="#" class="service-link active" data-service="crowdworks">クラウドワークス ▶︎</a>
+            </li>
+            <li>
+                <a href="#" class="service-link disabled" data-service="coconala" style="color: #6c757d; cursor: not-allowed; opacity: 0.65;">ココナラ ▶︎</a>
+            </li>
+        </ul>
+        
+        <div class="sidebar-header">
+            <h3>設定</h3>
+        </div>
+        
+        <div class="form-group">
+            <div class="model-label-container">
+                <label for="model-select">使用モデル</label>
+                <button type="button" class="api-key-btn" data-toggle="modal" data-target="#apiKeyModal">
+                    API Key
+                </button>
+            </div>
+            <select id="model-select" class="form-control">
+                <option value="gpt-4o" {% if settings.model == 'gpt-4o' %}selected{% endif %}>GPT-4o</option>
+                <option value="gpt-4o-mini" {% if settings.model == 'gpt-4o-mini' %}selected{% endif %}>GPT-4o-mini</option>
+                <option value="o1-mini" {% if settings.model == 'o1-mini' %}selected{% endif %}>o1-mini</option>
+                <option value="deepseek-chat" {% if settings.model == 'deepseek-chat' %}selected{% endif %}>Deepseek Chat</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="max-items">MAX件数</label>
+            <input type="number" class="form-control" id="max-items" min="1" max="100" value="{{ settings.max_items }}">
+        </div>
+        
+        <ul class="list-unstyled components">
+            <li>
+                <a href="#" class="filter-settings-link">＞ フィルター設定</a>
+            </li>
+            <li>
+                <a href="#" class="self-intro-link">＞ 自己紹介内容</a>
+            </li>
+            <li>
+                <a href="{{ url_for('job_history_page') }}">
+                    <i class="fa fa-history"></i> ＞ 案件履歴
+                </a>
+            </li>
+            <li>
+                <a href="#" id="clear-all-data-link" class="text-danger">
+                    <i class="fa fa-trash"></i> ＞ 全データクリア
+                </a>
+            </li>
+        </ul>
+        
+        <!-- 更新確認リンクをサイドバー最下部に配置 -->
+        <div style="padding: 15px 20px; text-align: center; margin-top: 20px;">
+            <a href="#" id="check-update-link" style="color: #ffffff; font-size: 1.3rem; display: inline-block;">
+                <i class="fa fa-refresh"></i> アプリの更新確認
+            </a>
+        </div>
+    </nav>
+
+    <!-- Page Content -->
+    <div id="content">
+        <div class="container-fluid">
+            <!-- CSRF Token hidden field -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- ジョブ一覧ビュー -->
+            <div class="view-container active" id="jobs-view">
+                <h2 class="mb-4">クラウドワークス案件一覧</h2>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th class="check-column">応募</th>
+                                <th class="title-column">タイトル</th>
+                                <th class="detail-column">詳細</th>
+                                <th class="budget-column">予算</th>
+                                <th class="client-column">クライアント</th>
+                                <th class="date-column">投稿日</th>
+                                <th class="reason-column">選定理由</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in jobs %}
+                            <tr>
+                                <td class="check-column">
+                                    <div class="form-check">
+                                        <input type="checkbox" 
+                                               class="form-check-input job-check" 
+                                               data-url="{{ job.url }}"
+                                               {% if job.url in checks and checks[job.url].checked %}checked{% endif %}>
+                                    </div>
+                                </td>
+                                <td class="title-column">
+                                    <a href="{{ job.url }}" target="_blank">{{ job.title }}</a>
+                                </td>
+                                <td class="detail-column">
+                                    <button class="btn btn-sm btn-info" 
+                                            data-toggle="modal" 
+                                            data-target="#detailsModal"
+                                            data-title="{{ job.title }}"
+                                            data-budget="{{ job.budget }}"
+                                            data-client="{{ job.client }}"
+                                            data-posted-date="{{ job.posted_date }}"
+                                            data-description="{{ job.detail_description }}">
+                                        詳細を表示
+                                    </button>
+                                </td>
+                                <td class="budget-column">{{ job.budget }}</td>
+                                <td class="client-column">{{ job.client }}</td>
+                                <td class="date-column">{{ job.posted_date }}</td>
+                                <td class="reason-column">{{ job.gpt_reason if job.gpt_reason else '' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <!-- 一括応募ボタンを追加 -->
+                    <div class="bulk-apply-container text-center mt-4 mb-4">
+                        <button id="bulk-apply-btn" class="btn btn-primary btn-lg">
+                            一括応募
+                        </button>
+                        <!-- 進捗表示用のプログレスバー（初期状態は非表示） -->
+                        <div class="progress-container mt-3" style="display: none;">
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+                            </div>
+                            <div class="progress-status text-center mt-2">処理待機中...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- フィルター設定トースト -->
+            <!-- トーストからモーダルに変更するためコメントアウト。HTML内に完全に残さないよう削除します
+            <div class="toast-notification filter-settings-toast" style="display: none;">
+                <div class="filter-settings">
+                    <h5>フィルター設定</h5>
+                    <div class="form-group mt-3">
+                        <p class="text-muted small">案件をフィルタリングするための条件を入力してください。</p>
+                        <textarea class="form-control" id="filter-prompt"
+                                placeholder="例: 予算が10,000円以上で、Pythonに関連する案件のみ選択">{{ settings.filter_prompt }}</textarea>
+                    </div>
+                    <div class="d-flex justify-content-end mt-4">
+                        <button class="btn btn-secondary mr-4" id="close-filter" style="min-width: 150px; font-size: 1.3rem; padding: 10px 20px;">閉じる</button>
+                        <button class="btn btn-primary" id="save-filter" style="min-width: 150px; font-size: 1.3rem; padding: 10px 20px;">保存</button>
+                    </div>
+                </div>
+            </div>
+            -->
+
+            <!-- 自己紹介内容トースト -->
+            <!-- トーストからモーダルに変更するためコメントアウト。HTML内に完全に残さないよう削除します
+            <div class="toast-notification self-intro-toast" style="display: none;">
+                <div class="self-intro-settings">
+                    <h5>自己紹介内容</h5>
+                    <div class="form-group mt-3">
+                        <p class="text-muted small">案件応募時に使用する自己紹介文を入力してください。</p>
+                        <textarea class="form-control" id="self-intro-text" rows="10"
+                                placeholder="例: 私は5年以上のWeb開発経験を持つフリーランスエンジニアです。">{{ settings.self_introduction }}</textarea>
+                    </div>
+                    <div class="d-flex justify-content-end mt-4">
+                        <button class="btn btn-secondary mr-4" id="close-self-intro" style="min-width: 150px; font-size: 1.3rem; padding: 10px 20px;">閉じる</button>
+                        <button class="btn btn-primary" id="save-self-intro" style="min-width: 150px; font-size: 1.3rem; padding: 10px 20px;">保存</button>
+                    </div>
+                </div>
+            </div>
+            -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1" role="dialog" aria-labelledby="detailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailsModalLabel"></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="job-details">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 120px;">予算</th>
+                            <td class="modal-budget"></td>
+                        </tr>
+                        <tr>
+                            <th>クライアント</th>
+                            <td class="modal-client"></td>
+                        </tr>
+                        <tr>
+                            <th>投稿日</th>
+                            <td class="modal-posted-date"></td>
+                        </tr>
+                        <tr>
+                            <th>詳細説明</th>
+                            <td class="modal-description"></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- API Key Modal -->
+<div class="modal fade" id="apiKeyModal" tabindex="-1" role="dialog" aria-labelledby="apiKeyModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="apiKeyModalLabel">API設定</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="api-key-input">OpenAI API Key</label>
+                    <input type="password" class="form-control" id="api-key-input" placeholder="OpenAIのAPIキーを入力してください" value="{{ settings.api_key if settings.api_key else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="deepseek-api-key-input">Deepseek API Key</label>
+                    <input type="password" class="form-control" id="deepseek-api-key-input" placeholder="DeepseekのAPIキーを入力してください" value="{{ settings.deepseek_api_key if settings.deepseek_api_key else '' }}">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" id="save-api-key">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Service Auth Modal -->
+<div class="modal fade api-key-modal" id="serviceAuthModal" tabindex="-1" role="dialog" aria-labelledby="serviceAuthModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="serviceAuthModalLabel">認証設定</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="service-email">メールアドレス</label>
+                    <input type="email" class="form-control" id="service-email" placeholder="メールアドレスを入力">
+                </div>
+                <div class="form-group">
+                    <label for="service-password">パスワード</label>
+                    <input type="password" class="form-control" id="service-password" placeholder="パスワードを入力">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-primary" id="save-service-auth">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 全データクリア確認モーダル -->
+<div class="modal fade" id="clearAllDataModal" tabindex="-1" role="dialog" aria-labelledby="clearAllDataModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="clearAllDataModalLabel">データクリアの確認</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p><strong>全ての案件データをクリアします。</strong></p>
+                <p class="text-danger">この操作は元に戻せません。よろしいですか？</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">キャンセル</button>
+                <button type="button" class="btn btn-danger" id="confirm-clear-all-data">クリア実行</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- アップデートモーダル -->
+<div class="modal fade" id="updateModal" tabindex="-1" role="dialog" aria-labelledby="updateModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="updateModalLabel">アプリケーションの更新</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" id="update-modal-close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="update-status-container">
+                    <p id="update-status-message">更新を確認中...</p>
+                    <div class="progress" id="update-progress-container" style="display: none;">
+                        <div id="update-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="update-cancel-btn">キャンセル</button>
+                <button type="button" class="btn btn-primary" id="update-start-btn" style="display: none;">更新を開始</button>
+                <button type="button" class="btn btn-success" id="update-restart-btn" style="display: none;">再起動</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- フィルター設定モーダル -->
+<div class="modal fade" id="filterSettingsModal" tabindex="-1" role="dialog" aria-labelledby="filterSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filterSettingsModalLabel">フィルター設定</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group mt-3">
+                    <p class="text-muted small">案件をフィルタリングするための条件を入力してください。</p>
+                    <textarea class="form-control" id="filter-prompt" rows="6"
+                            placeholder="例: 予算が10,000円以上で、Pythonに関連する案件のみ選択">{{ settings.filter_prompt }}</textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="close-filter">閉じる</button>
+                <button type="button" class="btn btn-primary" id="save-filter">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 自己紹介内容モーダル -->
+<div class="modal fade" id="selfIntroModal" tabindex="-1" role="dialog" aria-labelledby="selfIntroModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="selfIntroModalLabel">自己紹介内容</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group mt-3">
+                    <p class="text-muted small">案件応募時に使用する自己紹介文を入力してください。</p>
+                    <textarea class="form-control" id="self-intro-text" rows="10"
+                            placeholder="例: 私は5年以上のWeb開発経験を持つフリーランスエンジニアです。">{{ settings.self_introduction }}</textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" id="close-self-intro">閉じる</button>
+                <button type="button" class="btn btn-primary" id="save-self-intro">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{super()}}
+<script>
+    // グローバル変数の宣言
+    var settingsData = {};
+
+    // DOMの読み込み完了後に実行
+    document.addEventListener('DOMContentLoaded', function() {
+        // jQueryの有無を確認
+        if (typeof jQuery !== 'undefined') {
+            console.log('jQuery is loaded:', jQuery.fn.jquery);
+        } else {
+            console.error('jQuery is not loaded!');
+        }
+        
+        // サーバーからのデータをJavaScriptオブジェクトに変換
+        try {
+            // settings変数をscriptタグから取得
+            const settingsElement = document.getElementById('settings-data');
+            if (settingsElement) {
+                const settingsJson = settingsElement.getAttribute('data-settings');
+                settingsData = JSON.parse(settingsJson);
+                console.log("設定を読み込みました:", settingsData);
+            } else {
+                console.error("設定データの要素が見つかりません");
+                // デフォルト値を設定
+            settingsData = {
+                    model: "gpt-4o",
+                    max_items: 20,
+                    filter_prompt: "",
+                    self_introduction: ""
+                };
+            }
+        } catch (error) {
+            console.error("設定の読み込み中にエラーが発生しました:", error);
+            // エラー時はデフォルト値を設定
+            settingsData = {
+                model: "gpt-4o",
+                max_items: 20,
+                filter_prompt: "",
+                self_introduction: ""
+            };
+        }
+
+        // CSRFトークンを取得
+        const csrfToken = "{{ csrf_token() }}";
+
+        // フィルター設定リンクのクリックイベント
+        const filterSettingsLink = document.querySelector('.filter-settings-link');
+        if (filterSettingsLink) {
+            console.log('フィルター設定リンクを見つけました');
+            filterSettingsLink.addEventListener('click', function(e) {
+                console.log('フィルター設定リンクがクリックされました');
+                e.preventDefault();
+                showFilterSettings();
+            });
+        } else {
+            console.error('フィルター設定リンクが見つかりません');
+        }
+        
+        // 自己紹介内容リンクのクリックイベント
+        const selfIntroLink = document.querySelector('.self-intro-link');
+        if (selfIntroLink) {
+            console.log('自己紹介内容リンクを見つけました');
+            selfIntroLink.addEventListener('click', function(e) {
+                console.log('自己紹介内容リンクがクリックされました');
+                e.preventDefault();
+                showSelfIntroSettings();
+            });
+        } else {
+            console.error('自己紹介内容リンクが見つかりません');
+        }
+
+        // ブラウザウィンドウが閉じられる前に実行されるイベント
+        window.addEventListener('beforeunload', function(event) {
+            // 送信するデータを作成
+            const data = JSON.stringify({ closed: true });
+            
+            // ブラウザが閉じられる前にFlaskへ通知を送信
+            navigator.sendBeacon('/api/browser_close', new Blob([data], {type: 'application/json'}));
+        });
+
+        // フィルター設定を表示する関数（モーダルを使用）
+        function showFilterSettings() {
+            try {
+                console.log('showFilterSettings関数が呼び出されました');
+                
+                // モーダルを表示
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#filterSettingsModal').modal('show');
+                    console.log('フィルター設定モーダルを表示しました');
+                } else {
+                    console.error('jQueryが読み込まれていないため、モーダルを表示できません');
+                    showToast('フィルター設定を表示できません', 'error');
+                    return;
+                }
+                
+                // テキストエリアの内容を設定から取得
+                const filterPrompt = document.getElementById('filter-prompt');
+                if (filterPrompt) {
+                    filterPrompt.value = settingsData.filter_prompt || '';
+                    console.log('フィルタープロンプトの値を設定しました');
+                }
+            } catch (error) {
+                console.error('フィルター設定の表示中にエラーが発生しました:', error);
+                showToast('フィルター設定を表示できません: ' + error.message, 'error');
+            }
+        }
+        
+        // フィルター設定を閉じる関数
+        function closeFilterSettings() {
+            try {
+                console.log('closeFilterSettings関数が呼び出されました');
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#filterSettingsModal').modal('hide');
+                    console.log('フィルター設定モーダルを閉じました');
+                } else {
+                    console.error('jQueryが読み込まれていないため、モーダルを閉じられません');
+                }
+            } catch (error) {
+                console.error('フィルター設定を閉じる際にエラーが発生しました:', error);
+            }
+        }
+        
+        // フィルター設定を保存する関数
+        function saveFilterSettings() {
+            try {
+                console.log('saveFilterSettings関数が呼び出されました');
+                const filterPrompt = document.getElementById('filter-prompt');
+                if (filterPrompt) {
+                    const filterValue = filterPrompt.value;
+                    
+                    // ローカル設定を更新
+                    settingsData.filter_prompt = filterValue;
+                    
+                    // サーバーに設定を送信
+                    updateSettings({ filter_prompt: filterValue });
+                    
+                    // モーダルを閉じる
+                    closeFilterSettings();
+                    
+                    // 成功メッセージを表示（小さなトースト）
+                    showToast('フィルター設定を保存しました', 'success');
+                } else {
+                    console.error('フィルター設定入力要素が見つかりません');
+                    showToast('フィルター設定の保存に失敗しました', 'error');
+                }
+            } catch (error) {
+                console.error('フィルター設定の保存中にエラーが発生しました:', error);
+                showToast('フィルター設定の保存に失敗しました: ' + error.message, 'error');
+            }
+        }
+
+        // 自己紹介内容を表示する関数
+        function showSelfIntroSettings() {
+            try {
+                console.log('showSelfIntroSettings関数が呼び出されました');
+                
+                // モーダルを表示
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#selfIntroModal').modal('show');
+                    console.log('自己紹介内容モーダルを表示しました');
+                } else {
+                    console.error('jQueryが読み込まれていないため、モーダルを表示できません');
+                    showToast('自己紹介内容を表示できません', 'error');
+                    return;
+                }
+                
+                // テキストエリアの内容を設定から取得
+                const selfIntroText = document.getElementById('self-intro-text');
+                if (selfIntroText) {
+                    selfIntroText.value = settingsData.self_introduction || '';
+                    console.log('自己紹介テキストの値を設定しました');
+                }
+            } catch (error) {
+                console.error('自己紹介内容の表示中にエラーが発生しました:', error);
+                showToast('自己紹介内容を表示できません: ' + error.message, 'error');
+            }
+        }
+        
+        // 自己紹介内容を閉じる関数
+        function closeSelfIntroSettings() {
+            try {
+                console.log('closeSelfIntroSettings関数が呼び出されました');
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#selfIntroModal').modal('hide');
+                    console.log('自己紹介内容モーダルを閉じました');
+                } else {
+                    console.error('jQueryが読み込まれていないため、モーダルを閉じられません');
+                }
+            } catch (error) {
+                console.error('自己紹介内容を閉じる際にエラーが発生しました:', error);
+            }
+        }
+        
+        // 自己紹介内容を保存する関数
+        function saveSelfIntroSettings() {
+            try {
+                const selfIntroText = document.getElementById('self-intro-text');
+                if (selfIntroText) {
+                    const selfIntroValue = selfIntroText.value;
+                    
+                    // ローカル設定を更新
+                    settingsData.self_introduction = selfIntroValue;
+                    
+                    // サーバーに設定を送信
+                    updateSettings({ self_introduction: selfIntroValue });
+                    
+                    // モーダルを閉じる
+                    closeSelfIntroSettings();
+                    
+                    // 成功メッセージを表示（小さなトースト）
+                    showToast('自己紹介内容を保存しました', 'success');
+                } else {
+                    console.error('自己紹介内容入力要素が見つかりません');
+                    showToast('自己紹介内容の保存に失敗しました', 'error');
+                }
+            } catch (error) {
+                console.error('自己紹介内容の保存中にエラーが発生しました:', error);
+                showToast('自己紹介内容の保存に失敗しました: ' + error.message, 'error');
+            }
+        }
+
+        // 閉じるボタンとセーブボタンのイベントリスナーを設定
+        document.getElementById('close-self-intro')?.addEventListener('click', closeSelfIntroSettings);
+        document.getElementById('save-self-intro')?.addEventListener('click', saveSelfIntroSettings);
+        
+        // フィルター設定のボタンへのイベントリスナーを設定
+        document.getElementById('close-filter')?.addEventListener('click', closeFilterSettings);
+        document.getElementById('save-filter')?.addEventListener('click', saveFilterSettings);
+        
+        // モーダルのクローズボタン（「×」マーク）へのイベントリスナーも設定
+        document.querySelectorAll('#filterSettingsModal .close, #selfIntroModal .close')
+            .forEach(button => {
+                button.addEventListener('click', function() {
+                    // 親要素のIDを取得してどのモーダルのボタンかを判断
+                    const modalId = this.closest('.modal').id;
+                    if (modalId === 'filterSettingsModal') {
+                        closeFilterSettings();
+                    } else if (modalId === 'selfIntroModal') {
+                        closeSelfIntroSettings();
+                    }
+                });
+            });
+        
+        // 更新確認ボタンのイベントリスナーを設定
+        document.getElementById('check-update-link')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('更新確認ボタンがクリックされました');
+            
+            // シンプルなアラートで動作確認
+            alert('更新確認ボタンがクリックされました');
+            
+            // モーダルを直接表示
+            try {
+                const updateModal = document.getElementById('updateModal');
+                if (updateModal) {
+                    // Bootstrapのモーダルを初期化して表示
+                    if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                        $('#updateModal').modal('show');
+                    } else {
+                        // jQueryが利用できない場合はCSSでモーダルを表示
+                        updateModal.style.display = 'block';
+                        updateModal.classList.add('show');
+                        updateModal.setAttribute('aria-hidden', 'false');
+                        document.body.classList.add('modal-open');
+                        
+                        // 背景のオーバーレイを作成
+                        const backdrop = document.createElement('div');
+                        backdrop.className = 'modal-backdrop fade show';
+                        document.body.appendChild(backdrop);
+                    }
+                    
+                    // ステータス表示を更新
+                    const statusMsg = document.getElementById('update-status-message');
+                    if (statusMsg) {
+                        statusMsg.textContent = '更新を確認中...';
+                    }
+                    
+                    // 更新確認APIを実際に呼び出し
+                    console.log('API呼び出し前');
+                    fetch('/api/check_updates', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        },
+                        // バグ回避のためにbodyに空のJSONオブジェクトを含める
+                        body: JSON.stringify({})
+                    })
+                    .then(response => {
+                        console.log('APIレスポンス受信:', response);
+                        if (!response.ok) {
+                            throw new Error('APIサーバーからエラーレスポンス: ' + response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('APIデータ受信:', data);
+                        
+                        // ステータスメッセージ要素
+                        const statusMsg = document.getElementById('update-status-message');
+                        if (!statusMsg) {
+                            console.error('update-status-message要素が見つかりません');
+                            return;
+                        }
+                        
+                        // 更新ボタン要素
+                        const updateStartBtn = document.getElementById('update-start-btn');
+                        if (!updateStartBtn) {
+                            console.error('update-start-btn要素が見つかりません');
+                            return;
+                        }
+                        
+                        // アップデートが利用可能な場合
+                        if (data.update_available === true) {
+                            const message = data.message || `新しいバージョン ${data.latest_version} が利用可能です（現在のバージョン: ${data.current_version}）`;
+                            statusMsg.textContent = message;
+                            statusMsg.classList.remove('text-danger');
+                            updateStartBtn.style.display = 'block';
+                            console.log('更新ボタンを表示しました');
+                        } 
+                        // 正常だが更新なしの場合
+                        else if (data.status === 'success' || data.status === '最新バージョンを使用中です') {
+                            statusMsg.textContent = '最新バージョンを使用中です';
+                            statusMsg.classList.remove('text-danger');
+                            updateStartBtn.style.display = 'none';
+                        }
+                        // エラーの場合
+                        else {
+                            if (data.status && data.status.includes('404')) {
+                                statusMsg.textContent = 'リリース情報が見つかりません。最初のリリースを作成してください。';
+                                console.error('GitHub API 404エラー: リリース情報が見つかりません');
+                            } else {
+                                statusMsg.textContent = `エラー: ${data.status || data.message || '不明なエラー'}`;
+                            }
+                            statusMsg.classList.add('text-danger');
+                            updateStartBtn.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('更新確認中にエラーが発生:', error);
+                        if (statusMsg) {
+                            statusMsg.textContent = `エラー: ${error.message}`;
+                        }
+                        alert('更新確認エラー: ' + error.message);
+                    });
+                } else {
+                    console.error('updateModalが見つかりません');
+                    alert('エラー: 更新モーダルが見つかりません');
+                }
+            } catch (error) {
+                console.error('モーダル表示エラー:', error);
+                alert('エラー: ' + error.message);
+            }
+        });
+        
+        // 更新関連のボタンのイベントリスナーを設定
+        document.getElementById('update-start-btn')?.addEventListener('click', startUpdate);
+        document.getElementById('update-restart-btn')?.addEventListener('click', restartApp);
+        document.getElementById('update-cancel-btn')?.addEventListener('click', function() {
+            // シンプルなJavaScriptでモーダルを閉じる
+            const updateModal = document.getElementById('updateModal');
+            if (updateModal) {
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#updateModal').modal('hide');
+                } else {
+                    updateModal.style.display = 'none';
+                    updateModal.classList.remove('show');
+                    updateModal.setAttribute('aria-hidden', 'true');
+                    document.body.classList.remove('modal-open');
+                    
+                    // 背景のオーバーレイを削除
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        document.body.removeChild(backdrop);
+                    }
+                }
+            }
+        });
+        
+        document.getElementById('update-modal-close')?.addEventListener('click', function() {
+            // 同様にモーダルを閉じるロジック
+            const updateModal = document.getElementById('updateModal');
+            if (updateModal) {
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#updateModal').modal('hide');
+                } else {
+                    updateModal.style.display = 'none';
+                    updateModal.classList.remove('show');
+                    updateModal.setAttribute('aria-hidden', 'true');
+                    document.body.classList.remove('modal-open');
+                    
+                    // 背景のオーバーレイを削除
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        document.body.removeChild(backdrop);
+                    }
+                }
+            }
+        });
+
+        // API設定の保存処理
+        document.getElementById('save-api-key')?.addEventListener('click', function() {
+            try {
+                const apiKey = document.getElementById('api-key-input').value;
+                const deepseekApiKey = document.getElementById('deepseek-api-key-input').value;
+                
+                // 設定を更新
+                settingsData.api_key = apiKey;
+                settingsData.deepseek_api_key = deepseekApiKey;
+                
+                // サーバーに送信
+                updateSettings({
+                    api_key: apiKey,
+                    deepseek_api_key: deepseekApiKey
+                });
+                
+                // モーダルを閉じる
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#apiKeyModal').modal('hide');
+                }
+                
+                // 成功メッセージ（小さなトースト）
+                showToast('API設定を保存しました', 'success');
+            } catch (error) {
+                console.error('API Key保存中にエラーが発生:', error);
+                showToast('API設定の保存に失敗しました: ' + error.message, 'error');
+            }
+        });
+        
+        // 全データクリアボタンのイベントリスナーを設定
+        document.getElementById('clear-all-data-link')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            // モーダルを表示
+            if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                $('#clearAllDataModal').modal('show');
+            }
+        });
+        
+        // 全データクリア実行ボタンのイベントリスナーを設定
+        document.getElementById('confirm-clear-all-data')?.addEventListener('click', function() {
+            try {
+                // データクリアAPIを呼び出し
+                fetch('/api/job_history/clear', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                        // モーダルを閉じる
+                        if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                            $('#clearAllDataModal').modal('hide');
+                        }
+                        // データテーブルをクリア
+                        document.querySelector('#jobs-table tbody').innerHTML = '';
+                    } else {
+                        showToast('エラー: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('データクリア中にエラーが発生:', error);
+                    showToast('データクリアに失敗しました: ' + error.message, 'error');
+                });
+            } catch (error) {
+                console.error('データクリア処理中にエラーが発生:', error);
+                showToast('データクリアに失敗しました: ' + error.message, 'error');
+            }
+        });
+        
+        // 新規情報の取得ボタンのイベントリスナーを設定
+        document.querySelector('.btn-fetch')?.addEventListener('click', function() {
+            const fetchButton = this; // ボタン要素を保持
+            const progressContainer = document.getElementById('fetch-progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            const progressBarDiv = document.getElementById('progress-bar-div');
+            const progressStatus = document.getElementById('progress-status');
+            let dummyProgress = 0; // ダミーの進捗率
+            let progressInterval = null; // プログレスバーのタイマーID
+
+            // 既に処理中の場合は何もしない
+            if (fetchButton.classList.contains('btn-disabled')) {
+                return;
+            }
+
+            // 処理中はボタンを無効化
+            fetchButton.classList.add('btn-disabled');
+            fetchButton.disabled = true;
+
+            try {
+                // プログレスバーを表示し、初期化
+                if (progressContainer && (progressBar || progressBarDiv) && progressStatus) {
+                    if (progressBar) progressBar.value = 0;
+                    if (progressBarDiv) {
+                        progressBarDiv.style.width = '0%';
+                        progressBarDiv.setAttribute('aria-valuenow', '0');
+                    }
+                    
+                    progressStatus.textContent = '新着情報の取得中...'; // 初期テキスト
+                    progressContainer.style.display = 'block';
+                    progressContainer.setAttribute('aria-busy', 'true');
+                    progressStatus.setAttribute('aria-live', 'polite');
+
+                    console.log("プログレスバー初期化完了");
+
+                    // ダミープログレスを開始
+                    const estimatedDuration = 10000; // 推定時間 (10秒) - 必要に応じて調整
+                    const intervalTime = 100; // 更新間隔 (100ms)
+                    const totalSteps = estimatedDuration / intervalTime;
+                    const increment = 99 / totalSteps; // 99%まで進むように調整
+
+                    console.log("setInterval開始");
+                    progressInterval = setInterval(() => {
+                        dummyProgress += increment;
+                        console.log("dummyProgress:", dummyProgress);
+                        
+                        if (dummyProgress >= 99) {
+                            dummyProgress = 99; // 100%手前で止める
+                        }
+                        
+                        // 進捗値を明示的に設定
+                        const roundedValue = Math.floor(dummyProgress);
+                        
+                        // progress要素の更新
+                        if (progressBar) {
+                            progressBar.value = roundedValue;
+                            progressBar.setAttribute('aria-valuenow', roundedValue);
+                        }
+                        
+                        // div要素の更新（より広い互換性のため）
+                        if (progressBarDiv) {
+                            progressBarDiv.style.width = `${roundedValue}%`;
+                            progressBarDiv.setAttribute('aria-valuenow', roundedValue);
+                        }
+                        
+                        // 進捗値をConsoleにも表示（デバッグ用）
+                        console.log(`現在の進捗: ${roundedValue}%`);
+
+                        // 進捗に応じてテキストを変更 (70%を超えたら)
+                        if (dummyProgress > 70 && progressStatus.textContent === '新着情報の取得中...') {
+                            progressStatus.textContent = '案件の仕分け中...';
+                            console.log("テキスト変更: 案件の仕分け中...");
+                        }
+                    }, intervalTime);
+                } else {
+                    console.error("プログレスバー要素が見つかりません");
+                }
+                
+                // 新規データ取得APIを呼び出し
+                fetch('/fetch_new_data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => {
+                    // レスポンスステータスチェック
+                    if (!response.ok) {
+                        // サーバーエラーの場合、エラーメッセージを取得試行
+                        return response.json().then(errData => {
+                            throw new Error(errData.message || `サーバーエラーが発生しました (${response.status})`);
+                        }).catch(() => {
+                            // JSON解析失敗時
+                            throw new Error(`サーバーエラーが発生しました (${response.status})`);
+                        });
+                    }
+                    return response.json(); // 正常時はJSONを解析
+                })
+                .then(data => {
+                    console.log("APIレスポンス受信:", data);
+                    
+                    // ダミープログレスを停止
+                    if (progressInterval) {
+                        clearInterval(progressInterval);
+                        progressInterval = null;
+                        console.log("プログレスバー停止");
+                    }
+
+                    let finalStatusText = '';
+                    if (data.status === 'success') {
+                        finalStatusText = '取得完了';
+                        // 成功時に100%にする
+                        if (progressBar) {
+                            progressBar.value = 100;
+                            progressBar.setAttribute('aria-valuenow', '100');
+                        }
+                        if (progressBarDiv) {
+                            progressBarDiv.style.width = '100%';
+                            progressBarDiv.setAttribute('aria-valuenow', '100');
+                        }
+                        updateJobsTable(data.jobs);
+                        showToast(`案件データを ${data.jobs ? data.jobs.length : 0} 件更新しました`, 'success'); // 完了メッセージ
+                    } else {
+                        finalStatusText = 'エラー発生';
+                        // エラーでもプログレスバーは完了状態に見せる場合が多い
+                        if (progressBar) {
+                            progressBar.value = 100;
+                            progressBar.setAttribute('aria-valuenow', '100');
+                        }
+                        if (progressBarDiv) {
+                            progressBarDiv.style.width = '100%';
+                            progressBarDiv.setAttribute('aria-valuenow', '100');
+                        }
+                        showToast('エラー: ' + (data.message || '不明なエラー'), 'error');
+                    }
+                    progressStatus.textContent = finalStatusText;
+                    console.log("ステータス更新:", finalStatusText);
+
+                    // 少し待ってからプログレスバーを非表示にし、要素をリセット
+                    setTimeout(() => {
+                        if (progressContainer && progressBar && progressStatus) {
+                            progressContainer.style.display = 'none';
+                            progressContainer.setAttribute('aria-busy', 'false');
+                            progressBar.value = 0; // 次回のためにリセット
+                            progressStatus.textContent = '処理待機中...'; // テキストをリセット
+                            progressBar.setAttribute('aria-valuenow', '0');
+                            progressStatus.removeAttribute('aria-live');
+                            console.log("プログレスバー非表示");
+                        }
+                        // ボタンを有効化
+                        fetchButton.classList.remove('btn-disabled');
+                        fetchButton.disabled = false;
+                    }, 1500); // 1.5秒後に非表示
+                })
+                .catch(error => {
+                    console.error('データ取得中にエラーが発生:', error);
+                    
+                    // ダミープログレスを停止
+                    if (progressInterval) {
+                        clearInterval(progressInterval);
+                        progressInterval = null;
+                    }
+
+                    // エラーメッセージを表示
+                    if (progressStatus) {
+                        progressStatus.textContent = 'エラー発生';
+                    }
+                    
+                    showToast('データ取得に失敗しました: ' + error.message, 'error');
+
+                    // エラー発生時もプログレスバーは100%にして、少し待ってから隠す
+                    if (progressBar) {
+                        progressBar.value = 100;
+                        progressBar.setAttribute('aria-valuenow', '100');
+                    }
+                    if (progressBarDiv) {
+                        progressBarDiv.style.width = '100%';
+                        progressBarDiv.setAttribute('aria-valuenow', '100');
+                    }
+
+                    // 少し待ってからプログレスバーを非表示にし、要素をリセット
+                    setTimeout(() => {
+                        if (progressContainer) {
+                            progressContainer.style.display = 'none';
+                            progressContainer.setAttribute('aria-busy', 'false');
+                            if (progressBar) {
+                                progressBar.value = 0;
+                                progressBar.setAttribute('aria-valuenow', '0');
+                            }
+                            if (progressBarDiv) {
+                                progressBarDiv.style.width = '0%';
+                                progressBarDiv.setAttribute('aria-valuenow', '0');
+                            }
+                            progressStatus.textContent = '処理待機中...';
+                            progressStatus.removeAttribute('aria-live');
+                            console.log("プログレスバー非表示");
+                        }
+                        // ボタンを有効化
+                        fetchButton.classList.remove('btn-disabled');
+                        fetchButton.disabled = false;
+                    }, 1500);
+                });
+            } catch (error) {
+                console.error('データ取得処理の開始中にエラーが発生:', error);
+                
+                // ダミープログレスを停止
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
+                
+                // エラー時もプログレスバーを非表示にする等の後始末
+                if (progressContainer) {
+                    progressContainer.style.display = 'none';
+                    progressContainer.setAttribute('aria-busy', 'false');
+                    if (progressBar) {
+                        progressBar.value = 0;
+                        progressBar.setAttribute('aria-valuenow', '0');
+                    }
+                    if (progressBarDiv) {
+                        progressBarDiv.style.width = '0%';
+                        progressBarDiv.setAttribute('aria-valuenow', '0');
+                    }
+                    if (progressStatus) {
+                        progressStatus.textContent = '処理待機中...';
+                        progressStatus.removeAttribute('aria-live');
+                    }
+                }
+                
+                // ボタンを有効化
+                fetchButton.classList.remove('btn-disabled');
+                fetchButton.disabled = false;
+
+                showToast('データ取得処理を開始できませんでした: ' + error.message, 'error');
+            }
+        });
+        
+        // 一括応募ボタンのイベントリスナーを設定
+        document.getElementById('bulk-apply-btn')?.addEventListener('click', function() {
+            try {
+                // チェックされた案件のURLを収集
+                const checkedUrls = [];
+                document.querySelectorAll('.job-check:checked').forEach(checkbox => {
+                    checkedUrls.push(checkbox.value);
+                });
+                
+                if (checkedUrls.length === 0) {
+                    showToast('応募する案件が選択されていません', 'warning');
+                    return;
+                }
+                
+                // 一括応募APIを呼び出し
+                fetch('/bulk_apply', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        urls: checkedUrls
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showToast(data.message, 'success');
+                    } else {
+                        showToast('エラー: ' + data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('一括応募処理中にエラーが発生:', error);
+                    showToast('一括応募に失敗しました: ' + error.message, 'error');
+                });
+            } catch (error) {
+                console.error('一括応募処理中にエラーが発生:', error);
+                showToast('一括応募に失敗しました: ' + error.message, 'error');
+            }
+        });
+        
+        // 詳細表示ボタンのイベントリスナーを設定 (動的に生成される要素のため、親要素にイベントを委任)
+        document.querySelector('#jobs-table')?.addEventListener('click', function(e) {
+            // 詳細表示ボタンがクリックされた場合
+            if (e.target && e.target.classList.contains('toggle-details')) {
+                const jobUrl = e.target.getAttribute('data-url');
+                if (!jobUrl) return;
+                
+                // モーダルを表示
+                const detailsModal = document.getElementById('jobDetailsModal');
+                const modalTitle = detailsModal.querySelector('.modal-title');
+                const modalBody = detailsModal.querySelector('.modal-body');
+                
+                // ローディング表示
+                modalTitle.textContent = '読み込み中...';
+                modalBody.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="sr-only">Loading...</span></div></div>';
+                
+                // モーダルを表示
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#jobDetailsModal').modal('show');
+                }
+                
+                // 案件データを取得
+                fetch(`/api/job_details?url=${encodeURIComponent(jobUrl)}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        modalTitle.textContent = data.job.title || '案件詳細';
+                        
+                        // 詳細情報を表示
+                        let detailsHtml = '';
+                        if (data.job.detail_description) {
+                            detailsHtml += `<div class="modal-description">${data.job.detail_description}</div>`;
+                        } else {
+                            detailsHtml += `<div class="modal-description">${data.job.description || '詳細情報がありません'}</div>`;
+                        }
+                        
+                        // 追加情報があれば表示
+                        if (data.job.skills && data.job.skills.length > 0) {
+                            detailsHtml += `<div class="mt-3"><strong>スキル:</strong> ${data.job.skills.join(', ')}</div>`;
+                        }
+                        
+                        modalBody.innerHTML = detailsHtml;
+                    } else {
+                        modalTitle.textContent = 'エラー';
+                        modalBody.innerHTML = `<div class="alert alert-danger">${data.message || 'データの取得に失敗しました'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('案件詳細の取得中にエラーが発生:', error);
+                    modalTitle.textContent = 'エラー';
+                    modalBody.innerHTML = `<div class="alert alert-danger">詳細の取得に失敗しました: ${error.message}</div>`;
+                });
+            }
+        });
+        
+        // 案件テーブルを更新する関数
+        function updateJobsTable(jobs) {
+            try {
+                console.log('案件テーブルを更新します:', jobs);
+                
+                const tableBody = document.querySelector('table.table-striped tbody');
+                if (!tableBody) {
+                    console.error('案件テーブルが見つかりません');
+                    showToast('テーブルの更新に失敗しました: テーブルが見つかりません', 'error');
+                    return;
+                }
+                
+                // テーブルをクリア
+                tableBody.innerHTML = '';
+                
+                // 案件データが空の場合
+                if (!jobs || jobs.length === 0) {
+                    const emptyRow = document.createElement('tr');
+                    const emptyCell = document.createElement('td');
+                    emptyCell.colSpan = 7;
+                    emptyCell.className = 'text-center';
+                    emptyCell.textContent = '案件が見つかりませんでした';
+                    emptyRow.appendChild(emptyCell);
+                    tableBody.appendChild(emptyRow);
+                    return;
+                }
+                
+                // 案件データを追加
+                jobs.forEach(job => {
+                    const row = document.createElement('tr');
+                    
+                    // チェックボックス
+                    const checkCell = document.createElement('td');
+                    checkCell.className = 'check-column';
+                    const checkDiv = document.createElement('div');
+                    checkDiv.className = 'form-check';
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'form-check-input job-check';
+                    checkbox.setAttribute('data-url', job.url);
+                    checkDiv.appendChild(checkbox);
+                    checkCell.appendChild(checkDiv);
+                    row.appendChild(checkCell);
+                    
+                    // タイトル
+                    const titleCell = document.createElement('td');
+                    titleCell.className = 'title-column';
+                    const titleLink = document.createElement('a');
+                    titleLink.href = job.url;
+                    titleLink.target = '_blank';
+                    titleLink.textContent = job.title;
+                    titleCell.appendChild(titleLink);
+                    row.appendChild(titleCell);
+                    
+                    // 詳細ボタン
+                    const detailCell = document.createElement('td');
+                    detailCell.className = 'detail-column';
+                    const detailBtn = document.createElement('button');
+                    detailBtn.className = 'btn btn-sm btn-info';
+                    detailBtn.setAttribute('data-toggle', 'modal');
+                    detailBtn.setAttribute('data-target', '#detailsModal');
+                    detailBtn.setAttribute('data-title', job.title);
+                    detailBtn.setAttribute('data-budget', job.budget);
+                    detailBtn.setAttribute('data-client', job.client);
+                    detailBtn.setAttribute('data-posted-date', job.posted_date);
+                    detailBtn.setAttribute('data-description', job.detail_description || '');
+                    detailBtn.textContent = '詳細を表示';
+                    detailCell.appendChild(detailBtn);
+                    row.appendChild(detailCell);
+                    
+                    // 予算
+                    const budgetCell = document.createElement('td');
+                    budgetCell.className = 'budget-column';
+                    budgetCell.textContent = job.budget || '-';
+                    row.appendChild(budgetCell);
+                    
+                    // クライアント
+                    const clientCell = document.createElement('td');
+                    clientCell.className = 'client-column';
+                    clientCell.textContent = job.client || '-';
+                    row.appendChild(clientCell);
+                    
+                    // 投稿日
+                    const dateCell = document.createElement('td');
+                    dateCell.className = 'date-column';
+                    dateCell.textContent = job.posted_date || '-';
+                    row.appendChild(dateCell);
+                    
+                    // フィルター理由
+                    const reasonCell = document.createElement('td');
+                    reasonCell.className = 'reason-column';
+                    reasonCell.textContent = job.gpt_reason || '-';
+                    row.appendChild(reasonCell);
+                    
+                    tableBody.appendChild(row);
+                });
+                
+                // モーダルイベントの再設定
+                if (typeof $ !== 'undefined') {
+                    $('#detailsModal').on('show.bs.modal', function (event) {
+                        const button = $(event.relatedTarget);
+                        const title = button.data('title');
+                        const budget = button.data('budget');
+                        const client = button.data('client');
+                        const postedDate = button.data('posted-date');
+                        const description = button.data('description');
+                        
+                        const modal = $(this);
+                        modal.find('.modal-title').text(title);
+                        modal.find('.modal-budget').text(budget);
+                        modal.find('.modal-client').text(client);
+                        modal.find('.modal-posted-date').text(postedDate);
+                        modal.find('.modal-description').html(description);
+                    });
+                }
+                
+                // 更新完了メッセージ（トースト表示しない）
+                console.log('テーブルの更新が完了しました:', jobs.length, '件');
+            } catch (error) {
+                console.error('テーブル更新中にエラーが発生:', error);
+                showToast('テーブルの更新に失敗しました: ' + error.message, 'error');
+            }
+        }
+        
+        // モデル選択の変更時のイベントハンドラー
+        document.getElementById('model-select')?.addEventListener('change', function() {
+            const modelValue = this.value;
+            
+            // 設定を更新
+            settingsData.model = modelValue;
+            
+            // サーバーに設定を送信
+            updateSettings({ model: modelValue });
+            
+            console.log('モデル設定を変更しました:', modelValue);
+        });
+        
+        // MAX件数の変更時のイベントハンドラー
+        document.getElementById('max-items')?.addEventListener('change', function() {
+            const maxItems = parseInt(this.value);
+            
+            // 入力値の検証
+            if (isNaN(maxItems) || maxItems < 1) {
+                showToast('有効な数値を入力してください', 'error');
+                this.value = settingsData.max_items || 20;
+                return;
+            }
+            
+            // 設定を更新
+            settingsData.max_items = maxItems;
+            
+            // サーバーに設定を送信
+            updateSettings({ max_items: maxItems });
+            
+            console.log('MAX件数を変更しました:', maxItems);
+        });
+        
+        // サービスリンクのクリックイベント
+        document.querySelectorAll('.service-link').forEach(link => {
+            if (!link.classList.contains('disabled')) {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // アクティブなサービスを切り替え
+                    document.querySelectorAll('.service-link').forEach(l => {
+                        l.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                    
+                    const service = this.getAttribute('data-service');
+                    console.log('サービスを切り替えました:', service);
+                    
+                    // 認証状態をチェック
+                    fetch('/check_auth', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ service: service })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.authenticated) {
+                            // 認証が必要な場合はモーダルを表示
+                            showServiceAuthModal(service);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('認証チェック中にエラーが発生:', error);
+                    });
+                });
+            }
+        });
+        
+        // サービス認証設定を表示する関数
+        function showServiceAuthModal(service) {
+            // サービス名をモーダルのタイトルに設定
+            const modalTitle = document.getElementById('serviceAuthModalLabel');
+            if (modalTitle) {
+                modalTitle.textContent = `${service === 'crowdworks' ? 'クラウドワークス' : 'ココナラ'} 認証設定`;
+            }
+            
+            // 現在の認証情報を設定
+            const emailInput = document.getElementById('service-email');
+            const passwordInput = document.getElementById('service-password');
+            
+            if (emailInput && passwordInput) {
+                if (service === 'crowdworks') {
+                    emailInput.value = settingsData.crowdworks_email || '';
+                    passwordInput.value = settingsData.crowdworks_password || '';
+                } else if (service === 'coconala') {
+                    emailInput.value = settingsData.coconala_email || '';
+                    passwordInput.value = settingsData.coconala_password || '';
+                }
+            }
+            
+            // 現在のサービスをモーダルに設定
+            const modal = document.getElementById('serviceAuthModal');
+            if (modal) {
+                modal.setAttribute('data-service', service);
+            }
+            
+            // モーダルを表示
+            if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                $('#serviceAuthModal').modal('show');
+            }
+        }
+        
+        // サービス認証保存ボタンのイベントリスナー
+        document.getElementById('save-service-auth')?.addEventListener('click', function() {
+            try {
+                const modal = document.getElementById('serviceAuthModal');
+                const service = modal.getAttribute('data-service');
+                const email = document.getElementById('service-email').value;
+                const password = document.getElementById('service-password').value;
+                
+                // 設定データを作成
+                const updateData = {};
+                
+                if (service === 'crowdworks') {
+                    updateData.crowdworks_email = email;
+                    updateData.crowdworks_password = password;
+                    settingsData.crowdworks_email = email;
+                    settingsData.crowdworks_password = password;
+                } else if (service === 'coconala') {
+                    updateData.coconala_email = email;
+                    updateData.coconala_password = password;
+                    settingsData.coconala_email = email;
+                    settingsData.coconala_password = password;
+                }
+                
+                // サーバーに設定を送信
+                updateSettings(updateData);
+                
+                // モーダルを閉じる
+                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.modal !== 'undefined') {
+                    $('#serviceAuthModal').modal('hide');
+                }
+                
+                showToast('認証設定を保存しました', 'success');
+            } catch (error) {
+                console.error('認証設定の保存中にエラーが発生:', error);
+                showToast('認証設定の保存に失敗しました: ' + error.message, 'error');
+            }
+        });
+        
+        // ユーザーアバターのクリックイベント
+        document.getElementById('userAvatarContainer')?.addEventListener('click', function() {
+            const logoutToast = document.getElementById('logoutToast');
+            if (logoutToast) {
+                logoutToast.style.display = logoutToast.style.display === 'block' ? 'none' : 'block';
+            }
+        });
+        
+        // ログアウトトーストのクリックイベント
+        document.getElementById('logoutToast')?.addEventListener('click', function() {
+            document.getElementById('logout-form').submit();
+        });
+        
+        // 案件チェックボックスのクリックイベント（動的に生成される要素のため、親要素にイベントを委任）
+        document.querySelector('#jobs-table')?.addEventListener('change', function(e) {
+            if (e.target && e.target.classList.contains('job-check')) {
+                try {
+                    const checked = e.target.checked;
+                    const url = e.target.getAttribute('data-url') || e.target.value;
+                    
+                    // サーバーにチェック状態を送信
+                    fetch('/update_check', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            url: url,
+                            checked: checked
+                        })
+                    })
+                    .then(response => response.json())
+                    .catch(error => {
+                        console.error('チェック状態の更新中にエラーが発生:', error);
+                    });
+                } catch (error) {
+                    console.error('チェックボックスのイベント処理中にエラーが発生:', error);
+                }
+            }
+        });
+        
+        // jqueryが使用可能なら、詳細モーダルのイベントを設定
+        if (typeof jQuery !== 'undefined') {
+            $('#detailsModal').on('show.bs.modal', function (event) {
+                const button = $(event.relatedTarget); // モーダルを呼び出すボタン
+                
+                const title = button.data('title');
+                const budget = button.data('budget');
+                const client = button.data('client');
+                const postedDate = button.data('posted-date');
+                const description = button.data('description');
+                
+                // モーダル内の要素に情報を設定
+                const modal = $(this);
+                modal.find('.modal-title').text(title);
+                modal.find('.modal-budget').text(budget || '-');
+                modal.find('.modal-client').text(client || '-');
+                modal.find('.modal-posted-date').text(postedDate || '-');
+                modal.find('.modal-description').html(description || '詳細情報がありません');
+            });
+        }
+
+        // 「詳細を表示」ボタンのためのバックアップイベントリスナー（jQueryでdata-target属性が処理されない場合用）
+        document.querySelector('#jobs-table')?.addEventListener('click', function(e) {
+            if (e.target && e.target.matches('button.btn-sm.btn-info')) {
+                // jQueryが利用できず、かつモーダルが自動で表示されない場合のみ処理
+                if (typeof jQuery === 'undefined' || !jQuery.fn.modal) {
+                    e.preventDefault();
+                    
+                    const detailsModal = document.getElementById('detailsModal');
+                    if (!detailsModal) return;
+                    
+                    // データ属性から情報を取得
+                    const title = e.target.getAttribute('data-title');
+                    const budget = e.target.getAttribute('data-budget');
+                    const client = e.target.getAttribute('data-client');
+                    const postedDate = e.target.getAttribute('data-posted-date');
+                    const description = e.target.getAttribute('data-description');
+                    
+                    // モーダル内の要素に情報を設定
+                    detailsModal.querySelector('.modal-title').textContent = title || '';
+                    detailsModal.querySelector('.modal-budget').textContent = budget || '-';
+                    detailsModal.querySelector('.modal-client').textContent = client || '-';
+                    detailsModal.querySelector('.modal-posted-date').textContent = postedDate || '-';
+                    detailsModal.querySelector('.modal-description').innerHTML = description || '詳細情報がありません';
+                    
+                    // モーダルを表示
+                    detailsModal.style.display = 'block';
+                    detailsModal.classList.add('show');
+                    detailsModal.setAttribute('aria-hidden', 'false');
+                    document.body.classList.add('modal-open');
+                    
+                    // 背景のオーバーレイを作成
+                    const backdrop = document.createElement('div');
+                    backdrop.className = 'modal-backdrop fade show';
+                    document.body.appendChild(backdrop);
+                }
+            }
+        });
+    });
+
+    // アップデート確認関数
+    function checkForUpdates() {
+        console.log('checkForUpdates関数が呼び出されました');
+        
+        // 更新モーダルを表示
+        try {
+            console.log('モーダル表示前');
+            $('#updateModal').modal('show');
+            console.log('モーダル表示後');
+            
+            // ステータスメッセージを更新
+            const statusMessage = document.getElementById('update-status-message');
+            if (statusMessage) {
+                statusMessage.textContent = '更新を確認中...';
+                console.log('ステータスメッセージを更新しました');
+            } else {
+                console.error('update-status-messageエレメントが見つかりません');
+            }
+            
+            // 更新確認APIを呼び出し
+            console.log('API呼び出し前');
+            fetch('/api/check_updates', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => {
+                console.log('APIレスポンス受信:', response);
+                return response.json();
+            })
+            .then(data => {
+                console.log('APIデータ受信:', data);
+                if (data.status === 'success') {
+                    if (data.update_available) {
+                        // 更新が利用可能な場合
+                        document.getElementById('update-status-message').textContent = 
+                            `新しいバージョン ${data.latest_version} が利用可能です（現在のバージョン: ${data.current_version}）`;
+                        document.getElementById('update-start-btn').style.display = 'block';
+                    } else {
+                        // 更新がない場合
+                        document.getElementById('update-status-message').textContent = 
+                            '最新バージョンを使用中です';
+                    }
+                } else {
+                    // エラーの場合
+                    document.getElementById('update-status-message').textContent = 
+                        `エラー: ${data.status || data.message || '不明なエラー'}`;
+                }
+            })
+            .catch(error => {
+                console.error('更新確認中にエラーが発生:', error);
+                document.getElementById('update-status-message').textContent = 
+                    `エラー: ${error.message}`;
+            });
+        } catch (error) {
+            console.error('checkForUpdates関数の実行中にエラーが発生しました:', error);
+            alert('更新処理でエラーが発生しました: ' + error.message);
+        }
+    }
+    
+    // 更新開始関数
+    function startUpdate() {
+        console.log('startUpdate関数が呼び出されました');
+        
+        try {
+            // 更新開始ボタンを非表示
+            document.getElementById('update-start-btn').style.display = 'none';
+            
+            // ステータスメッセージを更新
+            const statusMsg = document.getElementById('update-status-message');
+            if (statusMsg) {
+                statusMsg.textContent = '更新を開始しています...';
+            }
+            
+            // プログレスバーを表示
+            const progressContainer = document.getElementById('update-progress-container');
+            const progressBar = document.getElementById('update-progress-bar');
+            if (progressContainer && progressBar) {
+                progressContainer.style.display = 'block';
+                progressBar.style.width = '0%';
+                progressBar.setAttribute('aria-valuenow', '0');
+            }
+            
+            // 更新実行APIを呼び出し
+            console.log('更新実行API呼び出し前');
+            fetch('/api/perform_update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => {
+                console.log('更新実行APIレスポンス:', response);
+                if (!response.ok) {
+                    throw new Error('APIサーバーからエラーレスポンス: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('更新実行データ受信:', data);
+                if (data.success) {
+                    // 更新が開始された場合、状態を定期的に確認
+                    statusMsg.textContent = data.message || '更新処理を実行中...';
+                    startUpdateStatusCheck();
+                } else {
+                    // エラーの場合
+                    statusMsg.textContent = data.message || '更新開始エラー';
+                    // エラーメッセージがロールバックを含む場合、赤色で表示
+                    if (data.message && data.message.includes('ロールバック')) {
+                        statusMsg.classList.add('text-danger');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('更新実行中にエラーが発生:', error);
+                if (statusMsg) {
+                    statusMsg.textContent = `エラー: ${error.message}`;
+                    statusMsg.classList.add('text-danger');
+                }
+            });
+        } catch (error) {
+            console.error('startUpdate関数実行エラー:', error);
+            alert('更新開始エラー: ' + error.message);
+        }
+    }
+    
+    // 更新状況の定期的な確認
+    function startUpdateStatusCheck() {
+        console.log('更新状況確認を開始');
+        
+        // 更新状況の定期的な確認
+        const statusInterval = setInterval(function() {
+            fetch('/api/update_status')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('APIサーバーからエラーレスポンス: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('更新状況データ:', data);
+                const statusMsg = document.getElementById('update-status-message');
+                const progressBar = document.getElementById('update-progress-bar');
+                
+                if (data.status === 'success') {
+                    // プログレスバーを更新
+                    if (progressBar) {
+                        progressBar.style.width = `${data.progress}%`;
+                        progressBar.setAttribute('aria-valuenow', data.progress);
+                    }
+                    
+                    if (statusMsg) {
+                        statusMsg.textContent = data.message;
+                    }
+                    
+                    // 更新が完了または失敗した場合
+                    if (data.progress >= 100 || data.message.includes('完了')) {
+                        clearInterval(statusInterval);
+                        document.getElementById('update-restart-btn').style.display = 'block';
+                    } else if (data.message.includes('エラー') || data.message.includes('失敗')) {
+                        clearInterval(statusInterval);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('更新状況確認中にエラーが発生:', error);
+                clearInterval(statusInterval);
+                
+                const statusMsg = document.getElementById('update-status-message');
+                if (statusMsg) {
+                    statusMsg.textContent = `エラー: ${error.message}`;
+                }
+            });
+        }, 1000);
+    }
+    
+    // アプリケーション再起動関数
+    function restartApp() {
+        // ページをリロード
+        window.location.reload();
+    }
+
+    // 設定を更新する関数
+    function updateSettings(newSettings) {
+        fetch('/update_settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(newSettings)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                console.log('設定を更新しました');
+            } else {
+                console.error('エラー: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('エラー: ' + error.message);
+        });
+    }
+
+    // トースト表示関数
+    function showToast(message, type) {
+        console.log('showToast関数が呼び出されました:', message, type);
+        
+        // 既存のトーストを削除
+        const existingToasts = document.querySelectorAll('.toast-notification');
+        existingToasts.forEach(toast => {
+            document.body.removeChild(toast);
+        });
+        
+        // 新しいトーストを作成
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${type}`;
+        toast.innerHTML = message;
+        document.body.appendChild(toast);
+        
+        // タイムアウトIDを保存するための属性を追加
+        toast.setAttribute('data-timeout-id', '');
+        
+        console.log('トースト要素を作成しました:', toast);
+        
+        // 表示のタイミングを少し遅らせる
+        setTimeout(() => {
+            toast.classList.add('toast-show');
+            console.log('トーストにtoast-showクラスを追加しました');
+            
+            // 一定時間後に非表示
+            const timeoutId = setTimeout(() => {
+                toast.classList.remove('toast-show');
+                console.log('トーストからtoast-showクラスを削除しました');
+                setTimeout(() => {
+                    if (document.body.contains(toast)) {
+                        document.body.removeChild(toast);
+                    }
+                    console.log('トーストを削除しました');
+                }, 300);
+            }, 3000);
+            
+            // タイムアウトIDを保存
+            toast.setAttribute('data-timeout-id', timeoutId);
+            
+            // トーストをクリックしたら閉じる
+            toast.addEventListener('click', () => {
+                // 設定したタイムアウトをクリア
+                clearTimeout(parseInt(toast.getAttribute('data-timeout-id')));
+                
+                // トーストを閉じる
+                toast.classList.remove('toast-show');
+                setTimeout(() => {
+                    if (document.body.contains(toast)) {
+                        document.body.removeChild(toast);
+                    }
+                }, 300);
+            });
+        }, 10);
+    }
+</script>
+<script src="{{ url_for('static', filename='js/fixes.js') }}"></script>
+{% endblock %} 
