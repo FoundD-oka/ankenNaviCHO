@@ -1548,13 +1548,50 @@ def start_node_server():
         return
     
     try:
+        # npmコマンドのパスを動的に検出
+        npm_path = "npm"  # デフォルト値
+        try:
+            # which/whereコマンドでnpmの場所を特定
+            if sys.platform == 'win32':
+                process = subprocess.run(["where", "npm"], capture_output=True, text=True, check=True)
+            else:
+                process = subprocess.run(["which", "npm"], capture_output=True, text=True, check=True)
+            
+            if process.stdout.strip():
+                npm_path = process.stdout.strip().split('\n')[0]  # 最初の行を取得
+                logger.info(f"検出されたnpmパス: {npm_path}")
+        except Exception as npm_error:
+            logger.warning(f"npmパスの自動検出に失敗しました: {str(npm_error)}")
+            # 既知のパスを試す
+            known_paths = [
+                "/Users/m1_mini/.nvm/versions/node/v22.14.0/bin/npm",
+                "/usr/local/bin/npm",
+                "/opt/homebrew/bin/npm"
+            ]
+            for path in known_paths:
+                if os.path.exists(path):
+                    npm_path = path
+                    logger.info(f"既知のパスからnpmを見つけました: {npm_path}")
+                    break
+        
         # 環境変数から起動コマンドを取得（デフォルトは「npm run dev」）
-        node_cmd = os.getenv('NODE_SERVER_CMD', 'npm run dev').split()
+        node_cmd_str = os.getenv('NODE_SERVER_CMD', 'npm run dev')
+        # npmをフルパスに置き換え
+        if node_cmd_str.startswith('npm'):
+            node_cmd_str = node_cmd_str.replace('npm', npm_path, 1)
+        
+        node_cmd = node_cmd_str.split()
         
         # カレントディレクトリからNodeサーバーのディレクトリを取得（デフォルトはカレントディレクトリ）
         node_dir = os.getenv('NODE_SERVER_DIR', '.')
         
         logger.info(f"Nodeサーバーを起動します: {' '.join(node_cmd)} in {node_dir}")
+        
+        # 環境変数を設定してPATHを通す
+        env = os.environ.copy()
+        npm_dir = os.path.dirname(npm_path)
+        if npm_dir not in env.get('PATH', ''):
+            env['PATH'] = f"{npm_dir}:{env.get('PATH', '')}"
         
         # Nodeサーバーを起動
         node_process = subprocess.Popen(
@@ -1562,7 +1599,8 @@ def start_node_server():
             cwd=node_dir,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True
+            text=True,
+            env=env
         )
         
         logger.info(f"Nodeサーバーを起動しました (PID={node_process.pid})")
