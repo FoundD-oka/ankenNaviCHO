@@ -113,6 +113,10 @@ class AppLauncher:
             # .envファイルを読み込む
             load_dotenv(self.env_file)
             
+            # FLASK_DEBUGを強制的に0に設定
+            os.environ['FLASK_DEBUG'] = '0'
+            set_key(self.env_file, 'FLASK_DEBUG', '0')
+            
             # ポート設定を取得
             env_port = os.getenv('PORT')
             if env_port:

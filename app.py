@@ -1646,8 +1646,8 @@ if __name__ == '__main__':
         port = 8000
         logger.info(f"デフォルトポートを使用: {port}")
     
-    # デバッグモードの設定（更新中は常に無効）
-    debug_mode = False if update_in_progress else os.getenv('FLASK_DEBUG', '0') == '1'
+    # デバッグモードの設定（常に無効）
+    debug_mode = False
     
     # ログに起動モードを記録
     logger.info(f"アプリケーションを起動: ポート={port}, デバッグモード={debug_mode}, 更新後の起動={update_in_progress}")

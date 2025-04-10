@@ -236,7 +236,7 @@ else
 fi
 
 # 初回起動ダイアログ表示
-/usr/bin/osascript -e 'display dialog "環境構築を開始します。完了までしばらくお待ちください。" buttons {"OK"} default button "OK" with title "ankenNaviCHO"'
+/usr/bin/osascript -e 'display dialog "環境構築を開始します。しばらくお待ちください。\n\n完了後に改めて通知します。" buttons {"OK"} default button "OK" with title "ankenNaviCHO"'
 
 # 事前チェック機能
 # Pythonバージョン確認
@@ -288,6 +288,15 @@ if [ -f ".env" ]; then
   else
     # PORTが存在しない場合は追加
     echo "PORT=$PORT" >> ".env"
+  fi
+
+  # FLASK_DEBUGを強制的に0に設定
+  if grep -q "^FLASK_DEBUG=" ".env"; then
+    # FLASK_DEBUGが既に存在する場合は更新
+    sed -i "" "s/^FLASK_DEBUG=.*/FLASK_DEBUG=0/" ".env"
+  else
+    # FLASK_DEBUGが存在しない場合は追加
+    echo "FLASK_DEBUG=0" >> ".env"
   fi
 fi
 
