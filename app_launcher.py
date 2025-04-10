@@ -15,6 +15,7 @@ import shutil
 from pathlib import Path
 from dotenv import load_dotenv, set_key
 import traceback
+import random
 
 # ロギング設定
 def setup_logging():
@@ -117,6 +118,7 @@ class AppLauncher:
             if env_port:
                 try:
                     self.port = int(env_port)
+                    logger.info(f".envファイルから読み込んだポート: {self.port}")
                 except ValueError:
                     logger.warning(f"ポート番号の解析に失敗しました: {env_port}。デフォルトポート {self.port} を使用します。")
             
@@ -177,8 +179,28 @@ class AppLauncher:
             # ポートが使用中の場合、使用可能なポートを探す
             logger.warning(f"ポート {self.port} は既に使用されています。別のポートを探します。")
             
-            # ポート8000から8100までを試す
-            for port in range(8000, 8100):
+            # より広い範囲のポートを試す (3000-9000)
+            # まず、元のポートの前後を試す
+            start_port = max(3000, self.port - 100)
+            end_port = min(9000, self.port + 100)
+            
+            for port in range(start_port, end_port):
+                if port == self.port:
+                    continue  # 既にチェック済み
+                
+                result = sock.connect_ex(('127.0.0.1', port))
+                if result != 0:
+                    logger.info(f"使用可能なポート {port} を見つけました")
+                    return port
+            
+            # より広範囲で探す
+            candidate_ports = list(range(3000, 9000))
+            random.shuffle(candidate_ports)  # ランダムな順序で試す
+            
+            for port in candidate_ports:
+                if port >= start_port and port <= end_port:
+                    continue  # 既にチェック済み
+                
                 result = sock.connect_ex(('127.0.0.1', port))
                 if result != 0:
                     logger.info(f"使用可能なポート {port} を見つけました")
@@ -200,8 +222,19 @@ class AppLauncher:
     def start_app(self):
         """アプリケーションを起動"""
         try:
-            # 使用可能なポートを見つける
-            port = self.find_available_port()
+            # 環境変数から直接ポートを取得（シェルスクリプトからの設定を優先）
+            env_port = os.environ.get('PORT')
+            if env_port:
+                try:
+                    port = int(env_port)
+                    logger.info(f"環境変数から直接ポートを取得しました: {port}")
+                except ValueError:
+                    logger.warning(f"環境変数のポート番号が無効です: {env_port}")
+                    port = self.find_available_port()
+            else:
+                # 使用可能なポートを見つける
+                port = self.find_available_port()
+            
             if not port:
                 raise Exception("使用可能なポートが見つかりませんでした")
             
@@ -271,7 +304,33 @@ class AppLauncher:
         """ブラウザでアプリケーションを開く"""
         url = f"http://localhost:{port}"
         logger.info(f"ブラウザでアプリケーションを開きます: {url}")
-        webbrowser.open(url)
+        
+        # Chromeのパスを確認
+        chrome_paths = [
+            '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',  # macOS
+            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',    # Windows
+            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+            '/usr/bin/google-chrome',  # Linux
+        ]
+        
+        chrome_path = None
+        for path in chrome_paths:
+            if os.path.exists(path):
+                chrome_path = path
+                break
+        
+        if chrome_path:
+            try:
+                # Chromeで開く
+                subprocess.Popen([chrome_path, url])
+                logger.info(f"Chromeで開きました: {chrome_path}")
+            except Exception as e:
+                logger.error(f"Chromeでの起動に失敗しました: {str(e)}")
+                # フォールバック：デフォルトブラウザで開く
+                webbrowser.open(url)
+        else:
+            logger.warning("Chromeが見つかりませんでした。デフォルトブラウザで開きます。")
+            webbrowser.open(url)
     
     def _log_output(self, pipe, name):
         """プロセスの出力をログに記録"""

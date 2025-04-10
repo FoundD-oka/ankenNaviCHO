@@ -1629,8 +1629,22 @@ if __name__ == '__main__':
     # アプリケーションを初期化
     init_app()
     
-    # .envファイルから環境変数PORTを取得
-    port = int(os.getenv('PORT', 8000))
+    # ポート設定を取得
+    # 環境変数から直接取得した値を優先（シェルスクリプトから渡される）
+    port = None
+    try:
+        # 環境変数から直接取得
+        if 'PORT' in os.environ:
+            port = int(os.environ['PORT'])
+            logger.info(f"環境変数から直接ポートを取得: {port}")
+        # .envファイルから取得
+        else:
+            port = int(os.getenv('PORT', 8000))
+            logger.info(f".envファイルからポートを取得: {port}")
+    except ValueError as e:
+        logger.error(f"ポート番号の解析に失敗しました: {str(e)}")
+        port = 8000
+        logger.info(f"デフォルトポートを使用: {port}")
     
     # デバッグモードの設定（更新中は常に無効）
     debug_mode = False if update_in_progress else os.getenv('FLASK_DEBUG', '0') == '1'

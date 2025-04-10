@@ -148,12 +148,122 @@ cat > "$MACOS_DIR/run" << 'EOF_RUN'
 #!/bin/bash
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 RESOURCES_DIR="$SCRIPT_DIR/../Resources"
+VENV_DIR="$HOME/Library/Application Support/ankenNaviCHO/venv"
 
-# 必要なPythonパッケージをインストール
+# ポート競合チェックと自動選択機能
+DEFAULT_PORT=8080
+ALTERNATIVE_PORTS=(8000 3000 8888 9000 7000)
+
+check_port() {
+  local port=$1
+  lsof -i:$port > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    return 1  # ポートは使用中
+  else
+    return 0  # ポートは利用可能
+  fi
+}
+
+# デフォルトポートをチェック
+if ! check_port $DEFAULT_PORT; then
+  echo "デフォルトポート $DEFAULT_PORT は使用中です。代替ポートを探します..."
+  
+  # 代替ポートをチェック
+  SELECTED_PORT=""
+  for port in "${ALTERNATIVE_PORTS[@]}"; do
+    if check_port $port; then
+      SELECTED_PORT=$port
+      echo "ポート $SELECTED_PORT が利用可能です。このポートを使用します。"
+      break
+    fi
+  done
+  
+  if [ -z "$SELECTED_PORT" ]; then
+    # 空いているポートをランダムに探す (3000-9000の範囲)
+    for port in $(shuf -i 3000-9000 -n 100); do
+      if [ $port -eq $DEFAULT_PORT ]; then
+        continue  # デフォルトポートはスキップ
+      fi
+      if check_port $port; then
+        SELECTED_PORT=$port
+        echo "ランダムに選択したポート $SELECTED_PORT が利用可能です。このポートを使用します。"
+        break
+      fi
+    done
+  fi
+  
+  if [ -z "$SELECTED_PORT" ]; then
+    /usr/bin/osascript -e 'display dialog "利用可能なポートが見つかりませんでした。他のアプリケーションを終了してから再試行してください。" buttons {"OK"} default button "OK" with icon stop with title "エラー"'
+    exit 1
+  fi
+  
+  # 選択したポートを環境変数に設定
+  export PORT=$SELECTED_PORT
+else
+  echo "デフォルトポート $DEFAULT_PORT は利用可能です。"
+  export PORT=$DEFAULT_PORT
+fi
+
+# 初回起動ダイアログ表示
+/usr/bin/osascript -e 'display dialog "環境構築を開始します。完了までしばらくお待ちください。" buttons {"OK"} default button "OK" with title "ankenNaviCHO"'
+
+# 事前チェック機能
+# Pythonバージョン確認
+PYTHON_VERSION=$(python3 --version 2>&1)
+if [[ $PYTHON_VERSION != *"Python 3"* ]]; then
+  /usr/bin/osascript -e 'display dialog "Python 3が必要です。インストールしてから再度お試しください。" buttons {"OK"} default button "OK" with icon stop with title "エラー"'
+  exit 1
+fi
+
+# Chromeがインストールされているか確認
+if [ ! -d "/Applications/Google Chrome.app" ] && [ ! -d "$HOME/Applications/Google Chrome.app" ]; then
+  /usr/bin/osascript -e 'display dialog "Google Chromeがインストールされていません。インストールしてから再度お試しください。" buttons {"OK"} default button "OK" with icon stop with title "エラー"'
+  exit 1
+fi
+
+# 仮想環境のセットアップ
+mkdir -p "$(dirname "$VENV_DIR")"
+if [ ! -d "$VENV_DIR" ]; then
+  echo "仮想環境を作成しています..."
+  python3 -m venv "$VENV_DIR"
+fi
+
+# 仮想環境を有効化
+source "$VENV_DIR/bin/activate"
+
+# 必要なパッケージをインストール
 cd "$RESOURCES_DIR"
-python3 -m pip install -q python-dotenv flask requests selenium webdriver_manager supabase
+if [ -f "requirements.txt" ]; then
+  pip install -q -r requirements.txt
+else
+  pip install -q python-dotenv flask requests selenium webdriver_manager supabase
+fi
 
-# アプリケーションを起動
+# .envファイルの妥当性確認
+if [ -f ".env" ]; then
+  if ! grep -q "API_KEY" ".env" && ! grep -q "SUPABASE_URL" ".env"; then
+    /usr/bin/osascript -e 'display dialog ".envファイルの内容が不完全です。必要な設定を確認してください。" buttons {"続行", "終了"} default button "終了" with icon caution with title "警告"'
+    if [ "$?" -ne "0" ]; then
+      exit 1
+    fi
+  fi
+fi
+
+# PORT環境変数を.envファイルに設定
+if [ -f ".env" ]; then
+  if grep -q "^PORT=" ".env"; then
+    # PORTが既に存在する場合は更新
+    sed -i "" "s/^PORT=.*/PORT=$PORT/" ".env"
+  else
+    # PORTが存在しない場合は追加
+    echo "PORT=$PORT" >> ".env"
+  fi
+fi
+
+# 完了ダイアログ
+/usr/bin/osascript -e 'display dialog "環境構築が完了しました。アプリケーションを起動します。" buttons {"OK"} default button "OK" with title "ankenNaviCHO"'
+
+# ChromeでURLを開く代わりに、pythonスクリプトに直接起動させる
 python3 "$RESOURCES_DIR/app_launcher.py"
 EOF_RUN
 
