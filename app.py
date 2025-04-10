@@ -1652,4 +1652,4 @@ if __name__ == '__main__':
     # ログに起動モードを記録
     logger.info(f"アプリケーションを起動: ポート={port}, デバッグモード={debug_mode}, 更新後の起動={update_in_progress}")
     
-    app.run(host='0.0.0.0', port=port, debug=debug_mode)
+    app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False)

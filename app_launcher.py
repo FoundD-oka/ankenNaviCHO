@@ -245,14 +245,17 @@ class AppLauncher:
             app_path = self.bundle_dir / 'app.py'
             logger.info(f"アプリケーションパス: {app_path}")
             
+            # 環境変数を設定
+            env = os.environ.copy()
+            env['PORT'] = str(port)
+            env['FLASK_ENV'] = 'production'  # 開発モードを無効化
+            env['FLASK_DEBUG'] = '0'         # デバッグモードを無効化
+            env['PYTHONWARNINGS'] = 'ignore::urllib3.exceptions.NotOpenSSLWarning'  # urllib3の警告を抑制
+            
             cmd = [
                 sys.executable,
                 str(app_path)
             ]
-            
-            # 環境変数を設定
-            env = os.environ.copy()
-            env['PORT'] = str(port)
             
             # アプリケーションを起動
             logger.info(f"アプリケーションを起動します: {' '.join(cmd)}")
@@ -305,32 +308,46 @@ class AppLauncher:
         url = f"http://localhost:{port}"
         logger.info(f"ブラウザでアプリケーションを開きます: {url}")
         
-        # Chromeのパスを確認
-        chrome_paths = [
-            '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',  # macOS
-            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',    # Windows
-            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-            '/usr/bin/google-chrome',  # Linux
-        ]
-        
-        chrome_path = None
-        for path in chrome_paths:
-            if os.path.exists(path):
-                chrome_path = path
-                break
+        # Chromeで開く
+        chrome_path = ''
+        if platform.system() == 'Darwin':  # macOS
+            chrome_paths = [
+                '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                os.path.expanduser('~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
+            ]
+            for path in chrome_paths:
+                if os.path.exists(path):
+                    chrome_path = path
+                    break
+        elif platform.system() == 'Windows':
+            chrome_paths = [
+                os.path.expandvars('%ProgramFiles%\\Google\\Chrome\\Application\\chrome.exe'),
+                os.path.expandvars('%ProgramFiles(x86)%\\Google\\Chrome\\Application\\chrome.exe'),
+                os.path.expandvars('%LocalAppData%\\Google\\Chrome\\Application\\chrome.exe')
+            ]
+            for path in chrome_paths:
+                if os.path.exists(path):
+                    chrome_path = path
+                    break
+        elif platform.system() == 'Linux':
+            chrome_paths = ['google-chrome', 'google-chrome-stable']
+            for path in chrome_paths:
+                if shutil.which(path):
+                    chrome_path = path
+                    break
         
         if chrome_path:
             try:
-                # Chromeで開く
-                subprocess.Popen([chrome_path, url])
+                # 新しいウィンドウで開く
+                subprocess.Popen([chrome_path, '--new-window', url])
                 logger.info(f"Chromeで開きました: {chrome_path}")
+                return
             except Exception as e:
-                logger.error(f"Chromeでの起動に失敗しました: {str(e)}")
-                # フォールバック：デフォルトブラウザで開く
-                webbrowser.open(url)
-        else:
-            logger.warning("Chromeが見つかりませんでした。デフォルトブラウザで開きます。")
-            webbrowser.open(url)
+                logger.error(f"Chromeでの起動に失敗: {str(e)}")
+        
+        # Chromeが見つからない場合はデフォルトブラウザで開く
+        logger.warning("Chromeが見つからないため、デフォルトブラウザで開きます")
+        webbrowser.open(url)
     
     def _log_output(self, pipe, name):
         """プロセスの出力をログに記録"""

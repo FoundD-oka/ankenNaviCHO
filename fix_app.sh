@@ -91,56 +91,87 @@ cp app_launcher.py "$RESOURCES_DIR/"
 
 # アイコンの処理
 echo "アプリケーションアイコンを作成しています..."
-if [ -f "AppIcon.icns" ]; then
+ICON_CREATED=false
+
+# 1. original_icon.png から生成
+if [ -f "original_icon.png" ]; then
+    echo "original_icon.png からアイコンを作成します..."
+    if command -v sips &> /dev/null && command -v iconutil &> /dev/null; then
+        # 一時的なiconsetディレクトリを作成
+        TEMP_ICONSET_DIR="tmp_icon_gen.iconset"
+        mkdir -p "$TEMP_ICONSET_DIR"
+
+        # sips を使用して必要なサイズのアイコンを生成
+        sips -z 16 16     original_icon.png --out "$TEMP_ICONSET_DIR/icon_16x16.png" > /dev/null 2>&1
+        sips -z 32 32     original_icon.png --out "$TEMP_ICONSET_DIR/icon_16x16@2x.png" > /dev/null 2>&1
+        sips -z 32 32     original_icon.png --out "$TEMP_ICONSET_DIR/icon_32x32.png" > /dev/null 2>&1
+        sips -z 64 64     original_icon.png --out "$TEMP_ICONSET_DIR/icon_32x32@2x.png" > /dev/null 2>&1
+        sips -z 128 128   original_icon.png --out "$TEMP_ICONSET_DIR/icon_128x128.png" > /dev/null 2>&1
+        sips -z 256 256   original_icon.png --out "$TEMP_ICONSET_DIR/icon_128x128@2x.png" > /dev/null 2>&1
+        sips -z 256 256   original_icon.png --out "$TEMP_ICONSET_DIR/icon_256x256.png" > /dev/null 2>&1
+        sips -z 512 512   original_icon.png --out "$TEMP_ICONSET_DIR/icon_256x256@2x.png" > /dev/null 2>&1
+        sips -z 512 512   original_icon.png --out "$TEMP_ICONSET_DIR/icon_512x512.png" > /dev/null 2>&1
+        # sips -z 1024 1024 original_icon.png --out "$TEMP_ICONSET_DIR/icon_512x512@2x.png" > /dev/null 2>&1 # 1024pxはオプション
+
+        # iconutil を使用して .icns ファイルを作成
+        iconutil -c icns "$TEMP_ICONSET_DIR" -o "$RESOURCES_DIR/AppIcon.icns"
+        
+        # 一時ディレクトリを削除
+        rm -rf "$TEMP_ICONSET_DIR"
+        
+        echo "アイコンファイルを作成しました: $RESOURCES_DIR/AppIcon.icns"
+        ICON_CREATED=true
+    else
+        echo "警告: アイコン生成に必要な sips または iconutil コマンドが見つかりません。アイコン作成をスキップします。"
+    fi
+# 2. 既存の AppIcon.icns を使用
+elif [ -f "AppIcon.icns" ] && [ "$ICON_CREATED" != true ]; then
     # 既存のicnsファイルを使用
     echo "既存のアイコンファイルを使用します: AppIcon.icns"
     cp AppIcon.icns "$RESOURCES_DIR/"
-else
-    # temp_iconsディレクトリから新しいアイコンを作成
-    if [ -d "temp_icons/AppIcon.iconset" ] && [ "$(ls -A temp_icons/AppIcon.iconset)" ]; then
-        echo "既存のアイコンセットからアイコンファイルを作成します..."
-        
-        # 一時的なディレクトリを作成
-        mkdir -p "tmp_iconset"
-        
-        # アイコンを正しい名前でコピー
-        if [ -f "temp_icons/AppIcon.iconset/Icon-App-40x40@1x.png" ]; then
-            cp "temp_icons/AppIcon.iconset/Icon-App-40x40@1x.png" "tmp_iconset/icon_16x16@2x.png"
-        fi
-        if [ -f "temp_icons/AppIcon.iconset/Icon-App-20x20@1x.png" ]; then
-            cp "temp_icons/AppIcon.iconset/Icon-App-20x20@1x.png" "tmp_iconset/icon_16x16.png"
-        fi
-        if [ -f "temp_icons/AppIcon.iconset/Icon-App-40x40@1x.png" ]; then
-            cp "temp_icons/AppIcon.iconset/Icon-App-40x40@1x.png" "tmp_iconset/icon_32x32.png"
-        fi
-        if [ -f "temp_icons/AppIcon.iconset/Icon-App-76x76@1x.png" ]; then
-            cp "temp_icons/AppIcon.iconset/Icon-App-76x76@1x.png" "tmp_iconset/icon_32x32@2x.png"
-            cp "temp_icons/AppIcon.iconset/Icon-App-76x76@1x.png" "tmp_iconset/icon_128x128.png"
-        fi
-        if [ -f "temp_icons/AppIcon.iconset/Icon-App-83.5x83.5@2x.png" ]; then
-            cp "temp_icons/AppIcon.iconset/Icon-App-83.5x83.5@2x.png" "tmp_iconset/icon_128x128@2x.png"
-            cp "temp_icons/AppIcon.iconset/Icon-App-83.5x83.5@2x.png" "tmp_iconset/icon_256x256.png"
-        fi
-        if [ -f "temp_icons/AppIcon.iconset/ItunesArtwork@2x.png" ]; then
-            cp "temp_icons/AppIcon.iconset/ItunesArtwork@2x.png" "tmp_iconset/icon_256x256@2x.png"
-            cp "temp_icons/AppIcon.iconset/ItunesArtwork@2x.png" "tmp_iconset/icon_512x512.png"
-            cp "temp_icons/AppIcon.iconset/ItunesArtwork@2x.png" "tmp_iconset/icon_512x512@2x.png"
-        fi
-        
-        # icnsファイルを作成
-        if command -v iconutil &> /dev/null; then
-            iconutil -c icns "tmp_iconset" -o "tmp_AppIcon.icns"
-            cp "tmp_AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
-            echo "アイコンファイルを作成しました: $RESOURCES_DIR/AppIcon.icns"
-            
-            # 一時ファイル削除
-            rm -rf "tmp_iconset" "tmp_AppIcon.icns"
-        else
-            echo "iconutilがインストールされていないため、アイコンファイルの作成をスキップします。"
-        fi
-    else
-        echo "アイコンセットが見つからないため、アイコンの作成をスキップします。"
+    ICON_CREATED=true
+# 3. temp_icons/AppIcon.iconset から生成
+elif [ -d "temp_icons/AppIcon.iconset" ] && [ "$(ls -A temp_icons/AppIcon.iconset)" ] && [ "$ICON_CREATED" != true ]; then
+    echo "既存のアイコンセットからアイコンファイルを作成します..."
+    
+    # 一時的なディレクトリを作成
+    mkdir -p "tmp_iconset"
+    
+    # アイコンを正しい名前でコピー (既存のロジックを流用)
+    if [ -f "temp_icons/AppIcon.iconset/Icon-App-40x40@1x.png" ]; then cp "temp_icons/AppIcon.iconset/Icon-App-40x40@1x.png" "tmp_iconset/icon_16x16@2x.png"; fi
+    if [ -f "temp_icons/AppIcon.iconset/Icon-App-20x20@1x.png" ]; then cp "temp_icons/AppIcon.iconset/Icon-App-20x20@1x.png" "tmp_iconset/icon_16x16.png"; fi
+    if [ -f "temp_icons/AppIcon.iconset/Icon-App-40x40@1x.png" ]; then cp "temp_icons/AppIcon.iconset/Icon-App-40x40@1x.png" "tmp_iconset/icon_32x32.png"; fi
+    if [ -f "temp_icons/AppIcon.iconset/Icon-App-76x76@1x.png" ]; then 
+        cp "temp_icons/AppIcon.iconset/Icon-App-76x76@1x.png" "tmp_iconset/icon_32x32@2x.png"; 
+        cp "temp_icons/AppIcon.iconset/Icon-App-76x76@1x.png" "tmp_iconset/icon_128x128.png"; 
     fi
+    if [ -f "temp_icons/AppIcon.iconset/Icon-App-83.5x83.5@2x.png" ]; then 
+        cp "temp_icons/AppIcon.iconset/Icon-App-83.5x83.5@2x.png" "tmp_iconset/icon_128x128@2x.png"; 
+        cp "temp_icons/AppIcon.iconset/Icon-App-83.5x83.5@2x.png" "tmp_iconset/icon_256x256.png"; 
+    fi
+    if [ -f "temp_icons/AppIcon.iconset/ItunesArtwork@2x.png" ]; then 
+        cp "temp_icons/AppIcon.iconset/ItunesArtwork@2x.png" "tmp_iconset/icon_256x256@2x.png"; 
+        cp "temp_icons/AppIcon.iconset/ItunesArtwork@2x.png" "tmp_iconset/icon_512x512.png"; 
+        cp "temp_icons/AppIcon.iconset/ItunesArtwork@2x.png" "tmp_iconset/icon_512x512@2x.png"; 
+    fi
+    
+    # icnsファイルを作成
+    if command -v iconutil &> /dev/null; then
+        iconutil -c icns "tmp_iconset" -o "tmp_AppIcon.icns"
+        cp "tmp_AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
+        echo "アイコンファイルを作成しました: $RESOURCES_DIR/AppIcon.icns"
+        ICON_CREATED=true
+        
+        # 一時ファイル削除
+        rm -rf "tmp_iconset" "tmp_AppIcon.icns"
+    else
+        echo "警告: iconutilがインストールされていないため、アイコンファイルの作成をスキップします。"
+    fi
+fi
+
+# アイコンが作成されなかった場合のフォールバックメッセージ
+if [ "$ICON_CREATED" != true ]; then
+    echo "有効なアイコンソースが見つからなかったため、アイコンの作成をスキップします。"
 fi
 
 # 起動スクリプトを作成（conda依存を除去）
@@ -324,10 +355,3 @@ echo -e "   ${GREEN}zip -r ${APP_NAME}_mac.zip ${APP_NAME}_mac.app${NC}"
 echo -e "2. zipファイルを配布先に提供します。"
 echo -e "3. ユーザーはzipファイルを解凍し、アプリケーションをダブルクリックして実行します。"
 
-# アプリケーションを今すぐ起動するか確認
-read -p "アプリケーションを今すぐ起動しますか？ (y/n): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "アプリケーションを起動しています..."
-    open "$INSTALL_DIR"
-fi 
