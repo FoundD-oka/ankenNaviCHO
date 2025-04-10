@@ -174,12 +174,50 @@ if [ "$ICON_CREATED" != true ]; then
     echo "有効なアイコンソースが見つからなかったため、アイコンの作成をスキップします。"
 fi
 
-# 起動スクリプトを作成（conda依存を除去）
+# 起動スクリプトを作成（シンプル版）
 cat > "$MACOS_DIR/run" << 'EOF_RUN'
 #!/bin/bash
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 RESOURCES_DIR="$SCRIPT_DIR/../Resources"
 VENV_DIR="$HOME/Library/Application Support/ankenNaviCHO/venv"
+SETUP_DONE_FLAG="$HOME/Library/Application Support/ankenNaviCHO/.setup_done"
+
+# セットアップ済みかチェック
+if [ ! -f "$SETUP_DONE_FLAG" ]; then
+  RESULT=$(/usr/bin/osascript <<EOF
+    display dialog "初回セットアップが必要です。実行しますか？" buttons {"キャンセル", "実行"} default button "実行"
+EOF
+  )
+  
+  # キャンセルしたら終了
+  if [[ "$RESULT" != *"実行"* ]]; then
+    exit 1
+  fi
+  
+  # 初回環境構築を実行
+  "$SCRIPT_DIR/setup"
+  
+  # セットアップ後はメッセージを表示して終了
+  /usr/bin/osascript -e 'display dialog "環境構築が完了しました。もう一度アプリケーションを起動してください。" buttons {"OK"} default button "OK" with title "ankenNaviCHO"'
+  exit 0
+fi
+
+# セットアップ済みなら直接アプリを起動
+source "$VENV_DIR/bin/activate"
+cd "$RESOURCES_DIR"
+python3 "$RESOURCES_DIR/app_launcher.py"
+EOF_RUN
+
+# セットアップスクリプトを作成
+cat > "$MACOS_DIR/setup" << 'EOF_SETUP'
+#!/bin/bash
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+RESOURCES_DIR="$SCRIPT_DIR/../Resources"
+VENV_DIR="$HOME/Library/Application Support/ankenNaviCHO/venv"
+SETUP_DONE_FLAG="$HOME/Library/Application Support/ankenNaviCHO/.setup_done"
+
+# 初回起動ダイアログ表示
+/usr/bin/osascript -e 'display dialog "環境構築を開始します。しばらくお待ちください。\n\n完了後に改めて通知します。" buttons {"OK"} default button "OK" with title "ankenNaviCHO"'
 
 # ポート競合チェックと自動選択機能
 DEFAULT_PORT=8080
@@ -234,9 +272,6 @@ else
   echo "デフォルトポート $DEFAULT_PORT は利用可能です。"
   export PORT=$DEFAULT_PORT
 fi
-
-# 初回起動ダイアログ表示
-/usr/bin/osascript -e 'display dialog "環境構築を開始します。しばらくお待ちください。\n\n完了後に改めて通知します。" buttons {"OK"} default button "OK" with title "ankenNaviCHO"'
 
 # 事前チェック機能
 # Pythonバージョン確認
@@ -300,15 +335,17 @@ if [ -f ".env" ]; then
   fi
 fi
 
-# 完了ダイアログ
-/usr/bin/osascript -e 'display dialog "環境構築が完了しました。アプリケーションを起動します。" buttons {"OK"} default button "OK" with title "ankenNaviCHO"'
+# セットアップ完了フラグを作成
+mkdir -p "$(dirname "$SETUP_DONE_FLAG")"
+touch "$SETUP_DONE_FLAG"
 
-# ChromeでURLを開く代わりに、pythonスクリプトに直接起動させる
-python3 "$RESOURCES_DIR/app_launcher.py"
-EOF_RUN
+# 処理が完了したことを表示
+echo "環境構築が完了しました。"
+EOF_SETUP
 
 # 起動スクリプトに実行権限を付与
 chmod +x "$MACOS_DIR/run"
+chmod +x "$MACOS_DIR/setup"
 
 # Info.plistを作成
 cat > "$CONTENTS_DIR/Info.plist" << EOF_PLIST
@@ -348,6 +385,8 @@ echo -e "${BLUE}$INSTALL_DIR${NC}"
 
 echo -e "\n${GREEN}アプリケーションの起動方法:${NC}"
 echo -e "Finderから ${BLUE}$INSTALL_DIR${NC} をダブルクリックします。"
+echo -e "※初回起動時は環境構築が実行され、完了後に再度起動が必要です。"
+echo -e "※2回目以降はすぐにアプリケーションが起動します。"
 
 echo -e "\n${GREEN}ログファイルの場所:${NC}"
 echo -e "${BLUE}$RESOURCES_DIR/logs/${NC}"
