@@ -1,0 +1,30 @@
+#!/bin/bash
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+RESOURCES_DIR="$SCRIPT_DIR/../Resources"
+VENV_DIR="$HOME/Library/Application Support/ankenNaviCHO/venv"
+SETUP_DONE_FLAG="$HOME/Library/Application Support/ankenNaviCHO/.setup_done"
+
+# セットアップ済みかチェック
+if [ ! -f "$SETUP_DONE_FLAG" ]; then
+  RESULT=$(/usr/bin/osascript <<EOF
+    display dialog "初回セットアップが必要です。実行しますか？" buttons {"キャンセル", "実行"} default button "実行"
+EOF
+  )
+  
+  # キャンセルしたら終了
+  if [[ "$RESULT" != *"実行"* ]]; then
+    exit 1
+  fi
+  
+  # 初回環境構築を実行
+  "$SCRIPT_DIR/setup"
+  
+  # セットアップ後はメッセージを表示して終了
+  /usr/bin/osascript -e 'display dialog "環境構築が完了しました。これからもう一度アプリケーションを起動してください。" buttons {"OK"} default button "OK" with title "ankenNaviCHO"'
+  exit 0
+fi
+
+# セットアップ済みなら直接アプリを起動
+source "$VENV_DIR/bin/activate"
+cd "$RESOURCES_DIR"
+python3 "$RESOURCES_DIR/app_launcher.py"

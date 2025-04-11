@@ -1,0 +1,216 @@
+#!/bin/bash
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+RESOURCES_DIR="$SCRIPT_DIR/../Resources"
+VENV_DIR="$HOME/Library/Application Support/ankenNaviCHO/venv"
+SETUP_DONE_FLAG="$HOME/Library/Application Support/ankenNaviCHO/.setup_done"
+
+# 初回起動ダイアログ表示
+/usr/bin/osascript -e 'display dialog "環境構築を開始します。しばらくお待ちください。\n\n完了後に改めて通知します。" buttons {"OK"} default button "OK" with title "ankenNaviCHO"'
+
+# ポート競合チェックと自動選択機能
+DEFAULT_PORT=8080
+ALTERNATIVE_PORTS=(8000 3000 8888 9000 7000)
+
+check_port() {
+  local port=$1
+  lsof -i:$port > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    return 1  # ポートは使用中
+  else
+    return 0  # ポートは利用可能
+  fi
+}
+
+# デフォルトポートをチェック
+if ! check_port $DEFAULT_PORT; then
+  echo "デフォルトポート $DEFAULT_PORT は使用中です。代替ポートを探します..."
+  
+  # 代替ポートをチェック
+  SELECTED_PORT=""
+  for port in "${ALTERNATIVE_PORTS[@]}"; do
+    if check_port $port; then
+      SELECTED_PORT=$port
+      echo "ポート $SELECTED_PORT が利用可能です。このポートを使用します。"
+      break
+    fi
+  done
+  
+  if [ -z "$SELECTED_PORT" ]; then
+    # 空いているポートをランダムに探す (3000-9000の範囲)
+    for port in $(shuf -i 3000-9000 -n 100); do
+      if [ $port -eq $DEFAULT_PORT ]; then
+        continue  # デフォルトポートはスキップ
+      fi
+      if check_port $port; then
+        SELECTED_PORT=$port
+        echo "ランダムに選択したポート $SELECTED_PORT が利用可能です。このポートを使用します。"
+        break
+      fi
+    done
+  fi
+  
+  if [ -z "$SELECTED_PORT" ]; then
+    /usr/bin/osascript -e 'display dialog "利用可能なポートが見つかりませんでした。他のアプリケーションを終了してから再試行してください。" buttons {"OK"} default button "OK" with icon stop with title "エラー"'
+    exit 1
+  fi
+  
+  # 選択したポートを環境変数に設定
+  export PORT=$SELECTED_PORT
+else
+  echo "デフォルトポート $DEFAULT_PORT は利用可能です。"
+  export PORT=$DEFAULT_PORT
+fi
+
+# 事前チェック機能
+# Pythonバージョン確認
+PYTHON_VERSION=$(python3 --version 2>&1)
+if [[ $PYTHON_VERSION != *"Python 3"* ]]; then
+  /usr/bin/osascript -e 'display dialog "Python 3が必要です。インストールしてから再度お試しください。" buttons {"OK"} default button "OK" with icon stop with title "エラー"'
+  exit 1
+fi
+
+# Chromeがインストールされているか確認
+if [ ! -d "/Applications/Google Chrome.app" ] && [ ! -d "$HOME/Applications/Google Chrome.app" ]; then
+  /usr/bin/osascript -e 'display dialog "Google Chromeがインストールされていません。インストールしてから再度お試しください。" buttons {"OK"} default button "OK" with icon stop with title "エラー"'
+  exit 1
+fi
+
+# 仮想環境のセットアップ
+mkdir -p "$(dirname "$VENV_DIR")"
+if [ ! -d "$VENV_DIR" ]; then
+  echo "仮想環境を作成しています..."
+  python3 -m venv "$VENV_DIR"
+fi
+
+# 仮想環境を有効化
+source "$VENV_DIR/bin/activate"
+
+# 必要なパッケージをインストール
+cd "$RESOURCES_DIR"
+if [ -f "requirements.txt" ]; then
+  pip install -q -r requirements.txt
+else
+  pip install -q python-dotenv flask requests selenium webdriver_manager supabase
+fi
+
+# .envファイルの妥当性確認
+if [ -f ".env" ]; then
+  if ! grep -q "API_KEY" ".env" && ! grep -q "SUPABASE_URL" ".env"; then
+    /usr/bin/osascript -e 'display dialog ".envファイルの内容が不完全です。必要な設定を確認してください。" buttons {"続行", "終了"} default button "終了" with icon caution with title "警告"'
+    if [ "$?" -ne "0" ]; then
+      exit 1
+    fi
+  fi
+fi
+
+# PORT環境変数を.envファイルに設定
+if [ -f ".env" ]; then
+  if grep -q "^PORT=" ".env"; then
+    # PORTが既に存在する場合は更新
+    sed -i "" "s/^PORT=.*/PORT=$PORT/" ".env"
+  else
+    # PORTが存在しない場合は追加
+    echo "PORT=$PORT" >> ".env"
+  fi
+
+  # FLASK_DEBUGを強制的に0に設定
+  if grep -q "^FLASK_DEBUG=" ".env"; then
+    # FLASK_DEBUGが既に存在する場合は更新
+    sed -i "" "s/^FLASK_DEBUG=.*/FLASK_DEBUG=0/" ".env"
+  else
+    # FLASK_DEBUGが存在しない場合は追加
+    echo "FLASK_DEBUG=0" >> ".env"
+  fi
+  
+  # SKIP_NODE_SERVER設定を追加（npmエラー対策）
+  if ! grep -q "^SKIP_NODE_SERVER=" ".env"; then
+    echo "SKIP_NODE_SERVER=1" >> ".env"
+  fi
+  
+  # CHROMEDRIVER_PRECACHE設定を追加（起動高速化）
+  if ! grep -q "^CHROMEDRIVER_PRECACHE=" ".env"; then
+    echo "CHROMEDRIVER_PRECACHE=1" >> ".env"
+  fi
+  
+  # DISABLE_CHROMEDRIVER_BACKGROUND_UPDATE設定を追加（起動高速化）
+  if ! grep -q "^DISABLE_CHROMEDRIVER_BACKGROUND_UPDATE=" ".env"; then
+    echo "DISABLE_CHROMEDRIVER_BACKGROUND_UPDATE=1" >> ".env"
+  fi
+fi
+
+# 事前にChromeDriverをキャッシュして起動を高速化
+if [ -f "$RESOURCES_DIR/chromedriver_manager.py" ]; then
+  echo "ChromeDriverを事前にキャッシュしています..."
+  # 仮想環境のPythonでChromeDriverを事前キャッシュするスクリプトを実行
+  CACHE_SCRIPT=$(cat <<'END_SCRIPT'
+import sys
+import os
+import time
+import subprocess
+import re
+
+# Chromeのバージョンを取得
+def get_chrome_version():
+    # MacOSのChromeバージョン取得
+    try:
+        chrome_path = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        if not os.path.exists(chrome_path):
+            chrome_path = os.path.expanduser("~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
+        
+        if os.path.exists(chrome_path):
+            version = subprocess.check_output([chrome_path, "--version"], stderr=subprocess.STDOUT)
+            match = re.search(r"Google Chrome ([\d.]+)", version.decode("utf-8"))
+            if match:
+                return match.group(1)
+    except Exception as e:
+        print(f"Chromeバージョン取得エラー: {e}")
+    return None
+
+# モジュールのインポートパスを設定
+sys.path.insert(0, os.getcwd())
+
+try:
+    from chromedriver_manager import setup_driver
+    
+    # 現在のChromeバージョンを取得
+    chrome_version = get_chrome_version()
+    print(f"検出されたChromeバージョン: {chrome_version}")
+    
+    # ChromeDriverを事前にセットアップして結果をキャッシュ
+    driver_path = setup_driver()
+    
+    if not driver_path:
+        raise Exception("ChromeDriverのセットアップが失敗しました")
+        
+    print(f"ChromeDriverを事前キャッシュしました: {driver_path}")
+    
+    # セットアップ後の情報をファイルに保存（Chromeバージョン含む）
+    with open(".chromedriver_cache_info", "w") as f:
+        f.write(f"PATH={driver_path}\n")
+        f.write(f"TIMESTAMP={int(time.time())}\n")
+        if chrome_version:
+            f.write(f"CHROME_VERSION={chrome_version}\n")
+    
+except Exception as e:
+    print(f"ChromeDriverのキャッシュ中にエラーが発生しました: {e}")
+    sys.exit(1)
+END_SCRIPT
+)
+  
+  # スクリプトを一時ファイルに書き出して実行
+  TEMP_SCRIPT_FILE="$RESOURCES_DIR/.temp_chromedriver_cache.py"
+  echo "$CACHE_SCRIPT" > "$TEMP_SCRIPT_FILE"
+  python3 "$TEMP_SCRIPT_FILE"
+  rm -f "$TEMP_SCRIPT_FILE"
+fi
+
+# セットアップ完了フラグを作成
+mkdir -p "$(dirname "$SETUP_DONE_FLAG")"
+touch "$SETUP_DONE_FLAG"
+
+# バックグラウンド初期化が完了するのを待つ
+echo "バックグラウンド初期化が完了するのを待っています（20秒）..."
+sleep 20
+
+# 処理が完了したことを表示
+echo "環境構築が完了しました。"

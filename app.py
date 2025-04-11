@@ -23,6 +23,11 @@ from openai import OpenAI
 from updater import check_for_updates, perform_update, get_update_status
 import atexit
 from fix_settings_patch import get_app_paths, get_data_dir_from_env
+import socket
+import fcntl
+import errno
+import webbrowser
+import tempfile
 
 # アプリケーションパスを取得
 app_paths = get_app_paths()
@@ -1731,18 +1736,208 @@ def browser_close():
             'message': str(e)
         }), 500
 
+# グローバル変数としてロックファイルパスとロックファイルハンドルを定義
+LOCK_FILE = None
+LOCK_FD = None
+
+def is_port_in_use(port):
+    """指定したポートが使用中かどうかをチェック"""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('127.0.0.1', port)) == 0
+
+def get_lock_file():
+    """ロックファイルのパスを取得"""
+    global LOCK_FILE
+    if LOCK_FILE is None:
+        # アプリケーションパスを取得
+        app_paths = get_app_paths()
+        data_dir = app_paths['data_dir']
+        LOCK_FILE = data_dir / "anken_navi.lock"
+    return LOCK_FILE
+
+def acquire_lock(lock_file):
+    """ロックファイルをロック (macOS用実装)"""
+    global LOCK_FD
+    
+    try:
+        # ロックファイルパスの親ディレクトリが存在することを確認
+        lock_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # ロックファイルをオープン
+        lock_fd = open(lock_file, 'w')
+        
+        try:
+            # 排他ロックを取得
+            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            
+            # ロック成功
+            LOCK_FD = lock_fd
+            return True
+        except IOError:
+            # ロック失敗（ファイルが既にロックされている）
+            try:
+                if lock_fd:
+                    lock_fd.close()
+            except:
+                pass
+            return False
+    except Exception as e:
+        logger.error(f"ロック取得中にエラー: {str(e)}")
+        return False
+
+def release_lock():
+    """ロックファイルのロック解除 (macOS用実装)"""
+    global LOCK_FD, LOCK_FILE
+    
+    if LOCK_FD:
+        try:
+            # ロック解除
+            fcntl.flock(LOCK_FD, fcntl.LOCK_UN)
+            
+            # ファイルを閉じる
+            LOCK_FD.close()
+            
+            # ロックファイルを削除
+            try:
+                if LOCK_FILE and LOCK_FILE.exists():
+                    LOCK_FILE.unlink()
+            except:
+                pass
+                
+            logger.info("アプリケーションロックを解除しました")
+        except Exception as e:
+            logger.error(f"ロック解除中にエラー: {str(e)}")
+        finally:
+            LOCK_FD = None
+
+def check_already_running(port):
+    """
+    アプリケーションが既に実行中かどうかをチェック
+    既に実行中の場合は終了する
+
+    Args:
+        port: アプリケーションのポート番号
+
+    Returns:
+        True: 既に実行中
+        False: 実行中ではない
+    """
+    # ポートが使用中かチェック
+    if is_port_in_use(port):
+        logger.info(f"ポート {port} は既に使用中です。アプリケーションは既に実行中です。")
+        # ブラウザは自動で開かない
+        return True
+
+    # ロックファイルのパスを取得
+    lock_file = get_lock_file()
+    
+    # ロックを取得を試行
+    if acquire_lock(lock_file):
+        # ロック成功 - PIDとポート情報をロックファイルに書き込む
+        if LOCK_FD:
+            LOCK_FD.write(f"{os.getpid()},{port}")
+            LOCK_FD.flush()
+            
+        # 終了時にロックを解除するよう登録
+        atexit.register(release_lock)
+        
+        logger.info(f"アプリケーションロックを取得しました: {lock_file}")
+        return False
+    else:
+        # ロック取得失敗 - 既に別のインスタンスが実行中
+        
+        # ロックファイルから情報を読み取り
+        try:
+            with open(lock_file, 'r') as f:
+                content = f.read().strip()
+                if content:
+                    parts = content.split(',')
+                    if len(parts) == 2:
+                        pid, existing_port = parts
+                        
+                        # PIDをチェックしてプロセスが実行中か確認
+                        try:
+                            pid = int(pid)
+                            # プロセスが存在するか確認
+                            try:
+                                os.kill(pid, 0)
+                                # プロセスが実行中の場合は既に実行中と表示するのみ
+                                logger.info(f"既存のインスタンスを検出: PID={pid}, ポート={existing_port}")
+                                return True
+                            except OSError:
+                                # プロセスが存在しない場合
+                                logger.warning(f"ロックファイルのプロセスが既に終了しています: {pid}")
+                                
+                                # ロックファイルを強制削除し、再試行
+                                try:
+                                    if lock_file.exists():
+                                        lock_file.unlink()
+                                    time.sleep(1)  # 少し待機
+                                    return check_already_running(port)  # 再試行
+                                except Exception as e:
+                                    logger.error(f"古いロックファイル削除中にエラー: {str(e)}")
+                        except (ValueError, TypeError) as e:
+                            logger.error(f"無効なPID: {str(e)}")
+        except Exception as e:
+            logger.error(f"ロックファイル読み取り中にエラー: {str(e)}")
+        
+        # ポートが使用中の場合も既に実行中と表示するのみ
+        if is_port_in_use(port):
+            logger.info(f"ポート {port} は既に使用中です。アプリケーションは既に実行中です。")
+            
+        return True
+
+# ブラウザのセッション管理のための関数
+def check_and_reopen_browser(port):
+    """
+    定期的にサーバーの状態をチェックして必要に応じてブラウザを再度開く
+    """
+    def browser_checker():
+        # 最初はブラウザが開かれたと仮定
+        browser_opened = True
+        last_check_time = time.time()
+        
+        while True:
+            try:
+                # 30秒ごとにチェック
+                time.sleep(30)
+                
+                # ユーザーがブラウザを閉じた後で一定時間以上経過した場合、ブラウザを再度開く
+                # （最初の1分は除外、セットアップ中の場合があるため）
+                current_time = time.time()
+                if current_time - last_check_time > 60 and not browser_opened:
+                    logger.info("ブラウザセッションが見つかりません。ブラウザを再度開きます。")
+                    webbrowser.open(f"http://localhost:{port}/login")
+                    browser_opened = True
+                
+                # ブラウザ終了通知があったことがわかるフラグをリセット
+                last_check_time = current_time
+                browser_opened = False
+                
+            except Exception as e:
+                logger.error(f"ブラウザチェック中にエラー: {str(e)}")
+    
+    # バックグラウンドスレッドとして実行
+    checker_thread = threading.Thread(target=browser_checker, daemon=True)
+    checker_thread.start()
+
 # アプリケーションの起動
 if __name__ == "__main__":
     try:
         # アプリケーションの初期化
         init_app()
         
+        # ポート番号を取得
+        port = int(os.environ.get('PORT', 8080))
+        
+        # 既に実行中かチェック
+        if check_already_running(port):
+            logger.info("アプリケーションは既に実行中です。終了します。")
+            sys.exit(0)
+        
         # Nodeサーバーを起動（必要な場合）
         if not os.environ.get('SKIP_NODE_SERVER', False):
             start_node_server()
-        
-        # ポート番号を取得
-        port = int(os.environ.get('PORT', 8080))
         
         # サーバーを起動
         app.run(host='0.0.0.0', port=port, debug=os.environ.get('FLASK_DEBUG', 'False').lower() == 'true')

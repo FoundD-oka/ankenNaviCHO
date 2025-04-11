@@ -6,6 +6,7 @@ import time
 import traceback
 from queue import Queue
 from threading import Thread
+import sys
 
 from flask import Flask, Response, jsonify, request, stream_with_context
 from loguru import logger
@@ -99,10 +100,39 @@ def setup_driver():
     chrome_options.add_experimental_option("detach", True)  # スクリプト終了後もブラウザを開いたままにする
     
     try:
-        driver_path = "./chromedriver"
+        # 環境変数からChromeDriverのパスを取得
+        driver_path = os.environ.get('SELENIUM_DRIVER_PATH')
+        
+        # 環境変数が設定されていない場合はアプリケーションパスから取得を試みる
+        if not driver_path or not os.path.exists(driver_path):
+            # fix_settings_patchモジュールをインポート
+            from fix_settings_patch import get_app_paths
+            
+            # アプリケーションパスを取得
+            app_paths = get_app_paths()
+            data_dir = app_paths['data_dir']
+            
+            # drivers ディレクトリ内の最新のChromeDriverを探す
+            drivers_dir = data_dir / 'drivers'
+            if os.path.exists(drivers_dir):
+                chrome_driver_dirs = [d for d in os.listdir(drivers_dir) if d.startswith('chromedriver_')]
+                if chrome_driver_dirs:
+                    # バージョンの降順でソート
+                    latest_driver_dir = sorted(chrome_driver_dirs, reverse=True)[0]
+                    # プラットフォームに応じたパスを構築
+                    if sys.platform == 'darwin':  # macOS
+                        driver_path = os.path.join(drivers_dir, latest_driver_dir, 'chromedriver-mac-x64', 'chromedriver')
+                    else:  # フォールバック
+                        driver_path = os.path.join(drivers_dir, latest_driver_dir, 'chromedriver')
+        
+        # バックアップとしてカレントディレクトリのchromedriver
+        if not driver_path or not os.path.exists(driver_path):
+            driver_path = "./chromedriver"
+            
         if not os.path.exists(driver_path):
             raise FileNotFoundError(f"ChromeDriver not found at {driver_path}")
         
+        logger.info(f"ChromeDriverパス: {driver_path}")
         os.chmod(driver_path, 0o755)
         service = Service(executable_path=driver_path)
         driver = webdriver.Chrome(service=service, options=chrome_options)

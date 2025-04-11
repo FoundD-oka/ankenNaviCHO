@@ -236,6 +236,27 @@ def run_app():
     port = int(os.environ.get("PORT", port))
     logger.info(f"環境変数から直接ポートを取得しました: {port}")
     
+    # アプリケーションが既に実行中かチェック
+    if is_port_in_use(port):
+        logger.info(f"ポート {port} は既に使用中です。アプリケーションは既に実行中です。")
+        # macOSダイアログでユーザーに通知
+        url = f"http://localhost:{port}"
+        message = f"アプリケーションは既に実行中です。\n\nURL: {url}"
+        cmd = [
+            'osascript', 
+            '-e', 
+            f'display dialog "{message}" buttons {{"OK"}} default button "OK" with title "ankenNaviCHO" with icon caution'
+        ]
+        try:
+            subprocess.run(cmd, check=True)
+            logger.info("ユーザーに通知ダイアログを表示しました")
+            # OKボタンが押されたらブラウザを開く
+            webbrowser.open(url)
+            logger.info(f"既存のインスタンスのURLを開きました: {url}")
+        except Exception as e:
+            logger.error(f"通知ダイアログの表示に失敗: {e}")
+        return
+    
     # アプリケーションパス
     app_path = os.path.join(os.getcwd(), "app.py")
     logger.info(f"アプリケーションパス: {app_path}")
