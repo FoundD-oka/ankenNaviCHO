@@ -22,6 +22,27 @@ import re
 from openai import OpenAI
 from updater import check_for_updates, perform_update, get_update_status
 import atexit
+from fix_settings_patch import get_app_paths, get_data_dir_from_env
+
+# アプリケーションパスを取得
+app_paths = get_app_paths()
+data_dir = app_paths['data_dir']
+
+# 設定ファイルのパス
+SETTINGS_FILE = str(app_paths['settings_file'])
+PROMPT_FILE = str(data_dir / 'prompt.txt')
+
+# デフォルト設定
+DEFAULT_SETTINGS = {
+    'model': 'gpt-4o-mini',
+    'api_key': '',
+    'deepseek_api_key': '',
+    'max_items': 100,
+    'filter_prompt': '',
+    'self_introduction': '',
+    'crowdworks_email': '',
+    'crowdworks_password': ''
+}
 
 # アプリケーション環境の初期化関数
 def initialize_app_environment():
@@ -29,14 +50,21 @@ def initialize_app_environment():
     logger.info("アプリケーション環境の初期化を開始")
     
     # 必要なディレクトリの作成
-    required_dirs = ['crawled_data', 'logs', 'backups', 'drivers']
-    for dir_name in required_dirs:
-        if not os.path.exists(dir_name):
-            logger.info(f"{dir_name}ディレクトリが存在しないため作成します")
-            os.makedirs(dir_name)
+    required_dirs = [
+        data_dir,
+        data_dir / 'logs',
+        data_dir / 'drivers',
+        data_dir / 'backups',
+        data_dir / 'crawled_data'
+    ]
+    
+    for dir_path in required_dirs:
+        if not os.path.exists(dir_path):
+            logger.info(f"{dir_path}ディレクトリが存在しないため作成します")
+            os.makedirs(dir_path, exist_ok=True)
     
     # 設定ファイルの初期化
-    settings_file = 'crawled_data/settings.json'
+    settings_file = app_paths['settings_file']
     if not os.path.exists(settings_file):
         default_settings = DEFAULT_SETTINGS.copy()
         logger.info(f"デフォルト設定ファイルを作成します: {settings_file}")
@@ -44,11 +72,11 @@ def initialize_app_environment():
             json.dump(default_settings, f, ensure_ascii=False, indent=2)
     
     # checked_jobs.jsonの初期化
-    checked_jobs_file = 'crawled_data/checked_jobs.json'
-    if not os.path.exists(checked_jobs_file):
-        logger.info(f"チェック済み案件ファイルを初期化します: {checked_jobs_file}")
-        with open(checked_jobs_file, 'w', encoding='utf-8') as f:
-            json.dump({}, f, ensure_ascii=False)
+    checks_file = app_paths['data_dir'] / 'checked_jobs.json'
+    if not os.path.exists(checks_file):
+        logger.info(f"チェック状態ファイルを作成します: {checks_file}")
+        with open(checks_file, 'w', encoding='utf-8') as f:
+            json.dump({}, f, ensure_ascii=False, indent=2)
     
     # prompt.txtの初期化
     if not os.path.exists(PROMPT_FILE):
@@ -72,7 +100,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/app.log', encoding='utf-8'),
+        logging.FileHandler(str(data_dir / 'logs' / 'app.log'), encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -249,14 +277,10 @@ def auth_required(f):
     
     return decorated_function
 
-# 一括応募機能の初期化
-init_bulk_apply()
-# 一括応募ルートの登録
-register_bulk_apply_routes(app)
-
 # 最新のフィルタリング済みJSONファイルを取得する関数
 def get_latest_filtered_json():
-    json_files = glob.glob('crawled_data/*_filtered.json')
+    data_dir = app_paths['data_dir']
+    json_files = glob.glob(str(data_dir / 'crawled_data' / '*_filtered.json'))
     if not json_files:
         return []
     latest_file = max(json_files, key=os.path.getctime)
@@ -265,7 +289,9 @@ def get_latest_filtered_json():
 
 # 全てのフィルタリング済みJSONファイルの一覧を取得する関数
 def get_all_filtered_json_files():
-    json_files = glob.glob('crawled_data/*_filtered.json')
+    data_dir = app_paths['data_dir']
+    crawled_data_dir = data_dir / 'crawled_data'
+    json_files = glob.glob(str(crawled_data_dir / '*_filtered.json'))
     if not json_files:
         return []
     
@@ -330,6 +356,9 @@ def clear_job_data(file_path=None):
         削除されたファイル数
     """
     try:
+        data_dir = app_paths['data_dir']
+        crawled_data_dir = data_dir / 'crawled_data'
+        
         if file_path:
             # 特定のファイルのみ削除
             if os.path.exists(file_path):
@@ -343,7 +372,7 @@ def clear_job_data(file_path=None):
         else:
             # 全てのファイルを削除（settings.jsonとchecked_jobs.jsonは除く）
             count = 0
-            for file_path in glob.glob('crawled_data/*.json'):
+            for file_path in glob.glob(str(crawled_data_dir / '*.json')):
                 if not file_path.endswith('settings.json') and not file_path.endswith('checked_jobs.json'):
                     os.remove(file_path)
                     count += 1
@@ -364,13 +393,17 @@ def clear_old_job_data(days=14):
         削除されたファイル数
     """
     try:
+        # アプリケーションパスを取得
+        data_dir = app_paths['data_dir']
+        crawled_data_dir = data_dir / 'crawled_data'
+        
         # 現在の日時から指定日数前の日時を計算
         cutoff_date = datetime.now() - timedelta(days=days)
         logger.info(f"{days}日以前（{cutoff_date.strftime('%Y-%m-%d')}より前）の案件データを削除します")
         
         # 削除対象のファイルを検索
         count = 0
-        for file_path in glob.glob('crawled_data/jobs_*.json'):
+        for file_path in glob.glob(str(crawled_data_dir / 'jobs_*.json')):
             # ファイル名からタイムスタンプを抽出（jobs_YYYYMMDD_HHMMSS.json または jobs_YYYYMMDD_HHMMSS_filtered.json）
             file_name = os.path.basename(file_path)
             match = re.search(r'jobs_(\d{8})_(\d{6})', file_name)
@@ -412,8 +445,12 @@ def refilter_jobs(filter_prompt, model="gpt-4o-mini"):
         再フィルタリングされた案件数
     """
     try:
+        # アプリケーションパスを取得
+        data_dir = app_paths['data_dir']
+        crawled_data_dir = data_dir / 'crawled_data'
+        
         # 全ての非フィルタリングJSONファイルを取得
-        raw_files = glob.glob('crawled_data/jobs_*.json')
+        raw_files = glob.glob(str(crawled_data_dir / 'jobs_*.json'))
         raw_files = [f for f in raw_files if not f.endswith('_filtered.json')]
         
         if not raw_files:
@@ -512,6 +549,7 @@ def load_checks():
 
 # チェック状態を保存
 def save_checks(checks):
+    os.makedirs(os.path.dirname(CHECKS_FILE), exist_ok=True)
     with open(CHECKS_FILE, 'w', encoding='utf-8') as f:
         json.dump(checks, f, ensure_ascii=False, indent=2)
 
@@ -550,8 +588,14 @@ def save_settings(settings):
         with open(PROMPT_FILE, 'w', encoding='utf-8') as f:
             json.dump(prompt_config, f, ensure_ascii=False, indent=2)
     
+    # デバッグ情報を追加
+    logger.info(f"設定を保存します: {SETTINGS_FILE}")
+    logger.debug(f"保存する設定: {settings}")
+    
     with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
         json.dump(settings, f, ensure_ascii=False, indent=2)
+    
+    logger.info("設定を保存しました")
 
 # 設定を読み込む
 def load_settings():
@@ -559,19 +603,31 @@ def load_settings():
     
     # 設定ファイルから読み込み
     if os.path.exists(SETTINGS_FILE):
-        with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
-            settings.update(json.load(f))
+        logger.info(f"設定ファイルを読み込みます: {SETTINGS_FILE}")
+        try:
+            with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                loaded_settings = json.load(f)
+                settings.update(loaded_settings)
+                logger.debug(f"読み込んだ設定: {settings}")
+        except Exception as e:
+            logger.error(f"設定ファイルの読み込みに失敗: {str(e)}")
+    else:
+        logger.warning(f"設定ファイルが見つかりません: {SETTINGS_FILE}")
     
     # prompt.txtからフィルター設定を読み込み
     if os.path.exists(PROMPT_FILE):
-        with open(PROMPT_FILE, 'r', encoding='utf-8') as f:
-            prompt_config = json.load(f)
-            settings['filter_prompt'] = prompt_config.get('prompt', '')
+        try:
+            with open(PROMPT_FILE, 'r', encoding='utf-8') as f:
+                prompt_config = json.load(f)
+                settings['filter_prompt'] = prompt_config.get('prompt', '')
+        except Exception as e:
+            logger.error(f"prompt.txtの読み込みに失敗: {str(e)}")
     
     # SelfIntroduction.txtから自己紹介文を読み込み
-    if os.path.exists('SelfIntroduction.txt'):
+    self_intro_file = app_paths['data_dir'] / 'SelfIntroduction.txt'
+    if os.path.exists(self_intro_file):
         try:
-            with open('SelfIntroduction.txt', 'r', encoding='utf-8') as f:
+            with open(self_intro_file, 'r', encoding='utf-8') as f:
                 settings['self_introduction'] = f.read()
         except Exception as e:
             logger.error(f"自己紹介文の読み込みに失敗: {str(e)}")
@@ -593,7 +649,10 @@ def login():
 @app.route('/login/google')
 def login_with_google():
     try:
-        redirect_url = 'http://localhost:3000/auth/callback'
+        # 実行中のポート番号を取得
+        port = int(os.environ.get('PORT', 8080))
+        redirect_url = f'http://localhost:{port}/auth/callback'
+        
         response = supabase.auth.sign_in_with_oauth({
             "provider": "google",
             "options": {
@@ -770,7 +829,8 @@ def update_settings():
                 settings['self_introduction'] = data['self_introduction']
                 # SelfIntroduction.txtファイルに保存
                 try:
-                    with open('SelfIntroduction.txt', 'w', encoding='utf-8') as f:
+                    self_intro_file = app_paths['data_dir'] / 'SelfIntroduction.txt'
+                    with open(self_intro_file, 'w', encoding='utf-8') as f:
                         f.write(data['self_introduction'])
                 except Exception as e:
                     logger.error(f"自己紹介文の保存に失敗: {str(e)}")
@@ -886,7 +946,11 @@ def fetch_new_data():
         
         # 最新のデータを読み込む
         try:
-            json_files = glob.glob('crawled_data/*_filtered.json')
+            data_dir = app_paths['data_dir']
+            crawled_data_dir = data_dir / 'crawled_data'
+            os.makedirs(crawled_data_dir, exist_ok=True)
+            
+            json_files = glob.glob(str(crawled_data_dir / '*_filtered.json'))
             if not json_files:
                 logger.warning("フィルタリング済みJSONファイルが見つかりません")
                 return jsonify({
@@ -1025,11 +1089,15 @@ def check_auth():
 @auth_required
 def fetch_status():
     try:
+        # アプリケーションパスを取得
+        data_dir = app_paths['data_dir']
+        log_dir = data_dir / 'logs'
+        
         # クローラーのログファイルを検索
         try:
-            log_files = glob.glob('logs/crawler_*.log')
+            log_files = glob.glob(str(log_dir / 'crawler_*.log'))
             if not log_files:
-                log_files = ['logs/crawler.log']
+                log_files = [str(log_dir / 'crawler.log')]
                 
             # ログファイルが存在するか確認
             if not os.path.exists(log_files[0]):
@@ -1155,25 +1223,31 @@ def get_job_history_content():
     try:
         file_path = request.args.get('file')
         
+        # 安全なパス構築
+        data_dir = app_paths['data_dir']
+        crawled_data_dir = data_dir / 'crawled_data'
+        file_name = os.path.basename(file_path) if file_path else ""
+        safe_file_path = str(crawled_data_dir / file_name)
+        
         # パスインジェクション対策
-        if not file_path or '..' in file_path or not file_path.startswith('crawled_data/') or not file_path.endswith('_filtered.json'):
+        if not file_path or not file_name.endswith('_filtered.json'):
             return jsonify({
                 'success': False,
                 'message': '無効な案件ファイルパスです。'
             }), 400
             
         # ファイルの存在確認
-        if not os.path.exists(file_path):
+        if not os.path.exists(safe_file_path):
             return jsonify({
                 'success': False,
                 'message': '案件ファイルが見つかりません。'
             }), 404
             
         # ファイルから案件を読み込む
-        jobs = load_filtered_json(file_path)
+        jobs = load_filtered_json(safe_file_path)
         
         # ファイル情報を取得
-        file_name = os.path.basename(file_path)
+        file_name = os.path.basename(safe_file_path)
         match = re.search(r'jobs_(\d{8})_(\d{6})_filtered\.json', file_name)
         date_str = ""
         if match:
@@ -1204,14 +1278,14 @@ def clear_job_history():
         
         if file_path:
             # パスインジェクション対策
-            if '..' in file_path or not file_path.startswith('crawled_data/') or not file_path.endswith('_filtered.json'):
-                return jsonify({
-                    'success': False,
-                    'message': '無効な案件ファイルパスです。'
-                }), 400
-                
+            file_name = os.path.basename(file_path)
+            # ファイルパスを安全に再構築
+            data_dir = app_paths['data_dir']
+            crawled_data_dir = data_dir / 'crawled_data'
+            safe_file_path = str(crawled_data_dir / file_name)
+            
             # ファイルの存在確認
-            if not os.path.exists(file_path):
+            if not os.path.exists(safe_file_path):
                 return jsonify({
                     'success': False,
                     'message': '案件ファイルが見つかりません。'
@@ -1487,6 +1561,14 @@ def chromedriver_update_api():
         driver_path = chromedriver_manager.setup_driver()
         
         if driver_path:
+            # 環境変数にドライバーパスを設定
+            os.environ["SELENIUM_DRIVER_PATH"] = driver_path
+            
+            # .envファイルにも保存（再起動時のため）
+            dotenv_path = os.path.join(os.getcwd(), '.env')
+            if os.path.exists(dotenv_path):
+                set_key(dotenv_path, 'SELENIUM_DRIVER_PATH', driver_path)
+            
             return jsonify({
                 "status": "success", 
                 "message": "ChromeDriverを更新しました", 
@@ -1612,9 +1694,17 @@ atexit.register(cleanup_resources)
 
 # 初期化関数を定義
 def init_app():
-    """アプリケーション初期化時に実行される関数"""
-    # Nodeサーバーを起動
-    start_node_server()
+    """アプリケーションの初期化"""
+    # 環境初期化
+    initialize_app_environment()
+    
+    # バルク応募機能の初期化
+    init_bulk_apply()
+    
+    # バルク応募ルートの登録
+    register_bulk_apply_routes(app)
+    
+    return app
 
 # ブラウザ終了通知を受け取るAPIエンドポイント
 @app.route('/api/browser_close', methods=['POST'])
@@ -1641,53 +1731,21 @@ def browser_close():
             'message': str(e)
         }), 500
 
-if __name__ == '__main__':
-    # 更新フラグを確認（起動時に一時的なフラグがある場合は消去）
-    update_in_progress = os.getenv('UPDATING', '0') == '1'
-    
-    # UPDATINGフラグがある場合はログに記録し、.envから削除してクリーンな状態で起動
-    if update_in_progress:
-        logger.info("更新プロセス後の再起動を検出しました。デバッグモードを無効化します。")
-        dotenv_path = os.path.join(os.getcwd(), '.env')
-        if os.path.exists(dotenv_path):
-            with open(dotenv_path, 'r') as f:
-                lines = f.readlines()
-            with open(dotenv_path, 'w') as f:
-                for line in lines:
-                    if not line.strip().startswith('UPDATING='):
-                        f.write(line)
-            logger.info(".envファイルからUPDATINGフラグを削除しました")
-    
-    # アプリケーション環境を初期化
-    initialize_app_environment()
-    
-    # 起動時に古いデータを削除
-    clear_old_job_data()
-    
-    # アプリケーションを初期化
-    init_app()
-    
-    # ポート設定を取得
-    # 環境変数から直接取得した値を優先（シェルスクリプトから渡される）
-    port = None
+# アプリケーションの起動
+if __name__ == "__main__":
     try:
-        # 環境変数から直接取得
-        if 'PORT' in os.environ:
-            port = int(os.environ['PORT'])
-            logger.info(f"環境変数から直接ポートを取得: {port}")
-        # .envファイルから取得
-        else:
-            port = int(os.getenv('PORT', 8000))
-            logger.info(f".envファイルからポートを取得: {port}")
-    except ValueError as e:
-        logger.error(f"ポート番号の解析に失敗しました: {str(e)}")
-        port = 8000
-        logger.info(f"デフォルトポートを使用: {port}")
-    
-    # デバッグモードの設定（常に無効）
-    debug_mode = False
-    
-    # ログに起動モードを記録
-    logger.info(f"アプリケーションを起動: ポート={port}, デバッグモード={debug_mode}, 更新後の起動={update_in_progress}")
-    
-    app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False)
+        # アプリケーションの初期化
+        init_app()
+        
+        # Nodeサーバーを起動（必要な場合）
+        if not os.environ.get('SKIP_NODE_SERVER', False):
+            start_node_server()
+        
+        # ポート番号を取得
+        port = int(os.environ.get('PORT', 8080))
+        
+        # サーバーを起動
+        app.run(host='0.0.0.0', port=port, debug=os.environ.get('FLASK_DEBUG', 'False').lower() == 'true')
+    except Exception as e:
+        logger.error(f"アプリケーション起動エラー: {str(e)}", exc_info=True)
+        sys.exit(1)

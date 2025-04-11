@@ -25,15 +25,26 @@ import platform
 # 自作のChromeDriver管理モジュールをインポート
 import chromedriver_manager
 
+# 設定ファイルパス用に修正モジュールをインポート
+from fix_settings_patch import get_app_paths, get_data_dir_from_env
+
 # 環境変数の読み込み
 load_dotenv()
 
+# アプリケーションパスを取得
+app_paths = get_app_paths()
+data_dir = app_paths['data_dir']
+
+# ログ保存先の初期化
+log_dir = data_dir / 'logs'
+os.makedirs(log_dir, exist_ok=True)
+
 # ログの設定
 logger.remove()  # デフォルトのハンドラを削除
-logger.add("logs/crawler.log", mode="w")  # 上書きモードでログファイルを作成
+logger.add(str(log_dir / "crawler.log"), mode="w")  # 上書きモードでログファイルを作成
 
 # 設定ファイルのパス
-SETTINGS_FILE = 'crawled_data/settings.json'
+SETTINGS_FILE = str(app_paths['settings_file'])
 
 # 設定を読み込む関数
 def load_settings():
@@ -57,7 +68,7 @@ deepseek_client = OpenAI(
 )
 
 # プロンプトファイルのパス
-PROMPT_FILE = 'prompt.txt'
+PROMPT_FILE = str(data_dir / 'prompt.txt')
 
 # デフォルトの設定
 DEFAULT_CONFIG = {
@@ -77,8 +88,8 @@ def load_config():
     """
     try:
         # まずprompt.txtを試す
-        if os.path.exists('prompt.txt'):
-            with open('prompt.txt', 'r', encoding='utf-8') as f:
+        if os.path.exists(PROMPT_FILE):
+            with open(PROMPT_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
         
         # 次に設定ファイルから読み込む
@@ -192,9 +203,13 @@ def save_filtered_jobs(jobs, base_filename):
 # クローリング後の処理を修正
 def process_crawled_data(jobs, crawler=None):
     """クロール済みデータの処理とGPTフィルタリング"""
+    # データ保存ディレクトリ
+    save_dir = data_dir / 'crawled_data'
+    os.makedirs(save_dir, exist_ok=True)
+    
     # 現在時刻を取得してファイル名を生成
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    base_filename = f'crawled_data/jobs_{timestamp}.json'
+    base_filename = str(save_dir / f'jobs_{timestamp}.json')
     
     # 生のデータを保存
     with open(base_filename, 'w', encoding='utf-8') as f:
@@ -578,8 +593,9 @@ class CrowdWorksCrawler:
         """前回のクロール結果を読み込む"""
         # アプリケーション初期化で既に作成されている可能性がありますが、
         # クローラーが単体で実行される場合のためにチェックします
-        save_dir = Path("crawled_data")
+        save_dir = data_dir / 'crawled_data'
         if not save_dir.exists():
+            os.makedirs(save_dir, exist_ok=True)
             return {}
         
         # 最新のJSONファイルを探す

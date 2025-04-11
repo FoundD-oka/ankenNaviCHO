@@ -13,22 +13,27 @@ from pathlib import Path
 from typing import Optional, Tuple, Dict
 import json
 from datetime import datetime, timedelta
+from fix_settings_patch import get_app_paths, get_data_dir_from_env
+
+# アプリケーションパスを取得
+app_paths = get_app_paths()
+data_dir = app_paths['data_dir']
 
 # ロガーの設定
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/chromedriver.log', encoding='utf-8'),
+        logging.FileHandler(str(data_dir / 'logs' / 'chromedriver.log'), encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger(__name__)
 
 # ChromeDriverの保存ディレクトリ
-DRIVER_DIR = Path('./drivers')
+DRIVER_DIR = data_dir / 'drivers'
 # 設定ファイルのパス
-CONFIG_FILE = Path('./drivers/config.json')
+CONFIG_FILE = DRIVER_DIR / 'config.json'
 # 更新チェック間隔（秒）
 UPDATE_CHECK_INTERVAL = 86400  # 24時間
 
@@ -274,8 +279,8 @@ class ChromeDriverManager:
             self.config["last_update"] = datetime.now().isoformat()
             self._save_config(self.config)
             
-            # シンボリックリンクまたはコピーを作成（プロジェクトルートの./chromedriverへ）
-            root_driver_path = Path('./chromedriver')
+            # シンボリックリンクまたはコピーを作成（data_dir/chromedriverへ）
+            root_driver_path = data_dir / 'chromedriver'
             if root_driver_path.exists():
                 if root_driver_path.is_symlink() or root_driver_path.is_file():
                     root_driver_path.unlink()
@@ -304,10 +309,10 @@ class ChromeDriverManager:
             logger.info(f"既存のChromeDriverを使用: {self.config['driver_path']}")
             return self.config["driver_path"]
         
-        # プロジェクトルートのchromedriver
-        root_driver = Path('./chromedriver')
+        # data_dir/chromedriver
+        root_driver = data_dir / 'chromedriver'
         if root_driver.exists():
-            logger.info(f"プロジェクトルートのChromeDriverを使用: {root_driver}")
+            logger.info(f"アプリデータディレクトリのChromeDriverを使用: {root_driver}")
             return str(root_driver)
         
         return None

@@ -62,6 +62,10 @@ cp -R bulk_apply.py "$RESOURCES_DIR/"
 cp -R crawler.py "$RESOURCES_DIR/"
 cp -R updater.py "$RESOURCES_DIR/"
 cp -R supabase_stripe_handler.py "$RESOURCES_DIR/"
+
+# 設定ファイルパスパッチをコピー
+cp -R fix_settings_patch.py "$RESOURCES_DIR/"
+
 if [ -f ".env" ]; then
     cp -R .env "$RESOURCES_DIR/"
 fi
