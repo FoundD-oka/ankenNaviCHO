@@ -16,18 +16,11 @@ chromedriver
 
 # ビルド関連
 /build/
-/dist/
+/dist/*
+!/dist/ankenNaviCHO_mac.zip
 
-# アプリディレクトリ
-/ankenNaviCHO_mac.exe/
-/ankenNaviCHO_mac.app/
-
-# キャッシュファイル
-__pycache__/
-**/__pycache__/
-.pytest_cache/
-.coverage
-htmlcov/
+# 仮想環境
+/.venv/
 
 # IDE関連
 .idea/
@@ -39,3 +32,29 @@ htmlcov/
 *.log
 *.bak
 *.tmp
+*.cer
+*.p12
+*.key
+*.csr
+*.certSigningRequest
+*.plist
+.setup_done
+TODO.md
+mytrue
+what_to_do.md
+CertificateSigningRequest.certSigningRequest
+entitlements.plist
+notary_*.json
+tmp_fix/
+Resources/venv/
+
+# アプリディレクトリ
+/ankenNaviCHO_mac.exe/
+/ankenNaviCHO_mac.app/
+
+# キャッシュファイル
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
