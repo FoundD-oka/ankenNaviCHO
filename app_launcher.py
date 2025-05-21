@@ -11,6 +11,7 @@ import socket
 import webbrowser
 import threading
 import re
+import platform
 from pathlib import Path
 from dotenv import load_dotenv
 from fix_settings_patch import get_app_paths, get_data_dir_from_env
@@ -104,7 +105,7 @@ def get_chrome_version():
 def load_env_file():
     """環境変数をロードしてPORTを取得"""
     # 実行環境パスを取得
-    bundle_dir = os.path.dirname(os.path.abspath(__file__))
+    bundle_dir = Path(getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__))))
     logger.info(f"アプリケーションを初期化しています。バンドルディレクトリ: {bundle_dir}")
     
     # カレントディレクトリを変更
@@ -120,7 +121,7 @@ def load_env_file():
     logger.info(f"APP_DATA_DIR環境変数を設定: {data_dir}")
     
     # .envファイルをロード
-    env_path = os.path.join(bundle_dir, ".env")
+    env_path = bundle_dir / ".env"
     port = 8080  # デフォルトポート
     
     if os.path.exists(env_path):
@@ -239,31 +240,37 @@ def run_app():
     # アプリケーションが既に実行中かチェック
     if is_port_in_use(port):
         logger.info(f"ポート {port} は既に使用中です。アプリケーションは既に実行中です。")
-        # macOSダイアログでユーザーに通知
         url = f"http://localhost:{port}"
         message = f"アプリケーションは既に実行中です。\n\nURL: {url}"
-        cmd = [
-            'osascript', 
-            '-e', 
-            f'display dialog "{message}" buttons {{"OK"}} default button "OK" with title "ankenNaviCHO" with icon caution'
-        ]
+        system = platform.system()
         try:
-            subprocess.run(cmd, check=True)
-            logger.info("ユーザーに通知ダイアログを表示しました")
-            # OKボタンが押されたらブラウザを開く
-            webbrowser.open(url)
-            logger.info(f"既存のインスタンスのURLを開きました: {url}")
+            if system == 'Darwin':
+                cmd = [
+                    'osascript',
+                    '-e',
+                    f'display dialog "{message}" buttons {{"OK"}} default button "OK" with title "ankenNaviCHO" with icon caution'
+                ]
+                subprocess.run(cmd, check=True)
+            elif system == 'Windows':
+                import tkinter.messagebox as mbox
+                mbox.showinfo('ankenNaviCHO', message)
+            else:
+                print(message)
         except Exception as e:
             logger.error(f"通知ダイアログの表示に失敗: {e}")
+        webbrowser.open(url)
+        logger.info(f"既存のインスタンスのURLを開きました: {url}")
         return
     
     # アプリケーションパス
-    app_path = os.path.join(os.getcwd(), "app.py")
+    if getattr(sys, '_MEIPASS', None):
+        app_path = os.path.join(sys._MEIPASS, 'app.py')
+    else:
+        app_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'app.py')
     logger.info(f"アプリケーションパス: {app_path}")
-    
+
     # 実行する Python インタプリタパスを取得
-    venv_dir = os.path.expanduser("~/Library/Application Support/ankenNaviCHO/venv")
-    python_path = os.path.join(venv_dir, "bin", "python3")
+    python_path = sys.executable
     
     # アプリケーションを起動
     command = [python_path, app_path]

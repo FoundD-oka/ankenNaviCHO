@@ -130,3 +130,22 @@ bash mac_build/build_app.sh
 
 ---
 これで「ダブルクリックでインストール＆起動」形式の配布が可能になります。
+# Windows アプリ (.exe) ビルド手順
+
+Windows 環境で実行可能な `ankenNaviCHO_win.exe` を生成する手順です。
+
+### 前提
+* Windows 10/11
+* Python 3.11+ がインストール済み
+
+### 1. ビルド実行
+```cmd
+win_build\build_app.bat
+```
+スクリプトが行うこと
+1. `.venv` を自動作成し依存パッケージをインストール
+2. `original_icon.png` を `.ico` 形式へ変換
+3. `win_build/ank_nav.spec` を使い PyInstaller で `dist/ankenNaviCHO_win.exe` を生成
+
+ビルド完了後、`dist` ディレクトリ内の `ankenNaviCHO_win.exe` を配布してください。
+
