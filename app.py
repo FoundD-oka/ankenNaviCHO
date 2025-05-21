@@ -985,7 +985,10 @@ def fetch_new_data():
             
         # クローラーのパスを取得
         try:
-            crawler_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'crawler.py')
+            if getattr(sys, '_MEIPASS', None):
+                crawler_path = os.path.join(sys._MEIPASS, 'crawler.py')
+            else:
+                crawler_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'crawler.py')
             if not os.path.exists(crawler_path):
                 return handle_error(
                     Exception(f"クローラーファイルが見つかりません: {crawler_path}"),

@@ -26,8 +26,12 @@ def get_app_paths():
             # py2appの場合
             bundle_dir = Path(os.path.dirname(os.path.dirname(sys.executable))) / 'Resources'
         
-        # データディレクトリを設定（ユーザーのホームディレクトリ内）
-        app_data_dir = Path(os.path.expanduser('~/Library/Application Support/ankenNaviCHO'))
+        # データディレクトリを設定
+        if os.name == 'nt':
+            base = Path(os.getenv('APPDATA', Path.home() / 'AppData' / 'Roaming'))
+            app_data_dir = base / 'ankenNaviCHO'
+        else:
+            app_data_dir = Path(os.path.expanduser('~/Library/Application Support/ankenNaviCHO'))
         
         # 必要なディレクトリを作成
         ensure_app_directories(app_data_dir)
