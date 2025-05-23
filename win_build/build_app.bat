@@ -19,9 +19,9 @@ if not exist "%VENV_DIR%" (
 set PYI=%VENV_DIR%\Scripts\pyinstaller.exe
 
 REM --- icon conversion (.png -> .ico) ---
-python win_build\convert_icon.py
+python convert_icon.py
 
-%PYI% --noconfirm win_build\ank_nav.spec
+%PYI% --noconfirm ank_nav.spec
 
 if exist dist\ankenNaviCHO_win.exe (
   echo [DONE] dist\ankenNaviCHO_win.exe created.
