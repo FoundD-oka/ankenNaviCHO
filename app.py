@@ -25,7 +25,11 @@ from updater import check_for_updates, perform_update, get_update_status
 import atexit
 from fix_settings_patch import get_app_paths, get_data_dir_from_env
 import socket
-import fcntl
+try:
+    import fcntl  # Unix系
+except ImportError:  # Windows
+    fcntl = None
+    import msvcrt
 import errno
 import webbrowser
 import tempfile
@@ -1983,29 +1987,28 @@ def kill_if_running(lock_file):
         return False
 
 def acquire_lock(lock_file):
-    """ロックファイルをロック (macOS用実装)"""
+    """ロックファイルをロック"""
     global LOCK_FD
-    
+
     try:
-        # ロックファイルパスの親ディレクトリが存在することを確認
         lock_file.parent.mkdir(parents=True, exist_ok=True)
-        
-        # ロックファイルをオープン
-        lock_fd = open(lock_file, 'w')
-        
+        lock_fd = open(lock_file, "w")
+
         try:
-            # 排他ロックを取得
-            fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            
-            # ロック成功
+            if fcntl is not None:
+                # Unix 系: fcntl を使用
+                fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            else:
+                # Windows: msvcrt.locking で1バイトロック
+                msvcrt.locking(lock_fd.fileno(), msvcrt.LK_NBLCK, 1)
+
             LOCK_FD = lock_fd
             return True
-        except IOError:
-            # ロック失敗（ファイルが既にロックされている）
+        except (IOError, OSError):
             try:
                 if lock_fd:
                     lock_fd.close()
-            except:
+            except Exception:
                 pass
             return False
     except Exception as e:
@@ -2013,24 +2016,24 @@ def acquire_lock(lock_file):
         return False
 
 def release_lock():
-    """ロックファイルのロック解除 (macOS用実装)"""
+    """ロックファイルのロック解除"""
     global LOCK_FD, LOCK_FILE
-    
+
     if LOCK_FD:
         try:
-            # ロック解除
-            fcntl.flock(LOCK_FD, fcntl.LOCK_UN)
-            
-            # ファイルを閉じる
+            if fcntl is not None:
+                fcntl.flock(LOCK_FD, fcntl.LOCK_UN)
+            else:
+                msvcrt.locking(LOCK_FD.fileno(), msvcrt.LK_UNLCK, 1)
+
             LOCK_FD.close()
-            
-            # ロックファイルを削除
+
             try:
                 if LOCK_FILE and LOCK_FILE.exists():
                     LOCK_FILE.unlink()
-            except:
+            except Exception:
                 pass
-                
+
             logger.info("アプリケーションロックを解除しました")
         except Exception as e:
             logger.error(f"ロック解除中にエラー: {str(e)}")
