@@ -140,7 +140,8 @@ Windows 環境で実行可能な `ankenNaviCHO_win.exe` を生成する手順で
 
 ### 1. ビルド実行
 ```cmd
-win_build\build_app.bat
+cd win_build
+.\build_app.bat
 ```
 スクリプトが行うこと
 1. `.venv` を自動作成し依存パッケージをインストール

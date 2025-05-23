@@ -282,7 +282,6 @@ def run_app():
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-        preexec_fn=os.setsid,
         env=os.environ.copy()  # 現在の環境変数を子プロセスに継承
     )
     
